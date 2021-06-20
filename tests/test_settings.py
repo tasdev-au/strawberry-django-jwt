@@ -1,8 +1,7 @@
 from datetime import timedelta
 
 from django.test import TestCase
-
-from graphql_jwt import settings
+from strawberry_django_jwt import settings
 
 
 class SettingsTests(TestCase):

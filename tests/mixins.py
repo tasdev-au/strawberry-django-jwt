@@ -1,9 +1,12 @@
-from graphql_jwt.settings import jwt_settings
-from graphql_jwt.shortcuts import get_token
-from graphql_jwt.signals import token_issued, token_refreshed
+from strawberry_django_jwt.settings import jwt_settings
+from strawberry_django_jwt.shortcuts import get_token
+from strawberry_django_jwt.signals import token_issued
+from strawberry_django_jwt.signals import token_refreshed
 
-from .context_managers import back_to_the_future, catch_signal, refresh_expired
-from .decorators import override_jwt_settings
+from .context_managers import back_to_the_future
+from .context_managers import catch_signal
+from .context_managers import refresh_expired
+from .decorators import OverrideJwtSettings
 
 
 class TokenAuthMixin:
@@ -70,8 +73,8 @@ class RefreshMixin:
         self.assertIsNone(response.errors)
         self.assertNotEqual(token, self.token)
         self.assertUsernameIn(data['payload'])
-        self.assertEqual(payload['origIat'], self.payload['origIat'])
-        self.assertGreater(payload['exp'], self.payload['exp'])
+        self.assertEqual(payload['origIat'], self.payload.origIat)
+        self.assertGreater(payload['exp'], self.payload.exp)
 
     def test_missing_token(self):
         response = self.execute({})
@@ -85,7 +88,7 @@ class RefreshMixin:
 
         self.assertIsNotNone(response.errors)
 
-    @override_jwt_settings(JWT_ALLOW_REFRESH=False)
+    @OverrideJwtSettings(JWT_ALLOW_REFRESH=False)
     def test_refresh_error(self):
         token = get_token(self.user)
         response = self.execute({

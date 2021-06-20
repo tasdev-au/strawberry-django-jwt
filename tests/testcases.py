@@ -1,17 +1,18 @@
 import json
 from unittest import mock
 
+import strawberry
 from django.contrib.auth import get_user_model
-from django.test import RequestFactory, testcases
-
-import graphene
-from graphene_django.views import GraphQLView
+from django.test import RequestFactory
+from django.test import testcases
 from graphql.execution.execute import GraphQLResolveInfo
-
-from graphql_jwt.decorators import jwt_cookie
-from graphql_jwt.settings import jwt_settings
-from graphql_jwt.testcases import JSONWebTokenClient, JSONWebTokenTestCase
-from graphql_jwt.utils import jwt_encode, jwt_payload
+from strawberry.django.views import GraphQLView
+from strawberry_django_jwt.decorators import jwt_cookie
+from strawberry_django_jwt.settings import jwt_settings
+from strawberry_django_jwt.testcases import JSONWebTokenClient
+from strawberry_django_jwt.testcases import JSONWebTokenTestCase
+from strawberry_django_jwt.utils import jwt_encode
+from strawberry_django_jwt.utils import jwt_payload
 
 
 class UserTestCase(testcases.TestCase):
@@ -46,8 +47,9 @@ class TestCase(UserTestCase):
 
 class SchemaTestCase(TestCase, JSONWebTokenTestCase):
 
-    class Query(graphene.ObjectType):
-        test = graphene.String()
+    @strawberry.type
+    class Query:
+        test: str
 
     Mutation = None
 

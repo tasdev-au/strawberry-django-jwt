@@ -1,8 +1,7 @@
 from django.contrib.admin import site
-
-from graphql_jwt.refresh_token import admin
-from graphql_jwt.refresh_token.utils import get_refresh_token_model
-from graphql_jwt.shortcuts import create_refresh_token
+from strawberry_django_jwt.refresh_token import admin
+from strawberry_django_jwt.refresh_token.utils import get_refresh_token_model
+from strawberry_django_jwt.shortcuts import create_refresh_token
 
 from ..testcases import TestCase
 
@@ -11,9 +10,10 @@ class AdminTestCase(TestCase):
 
     def setUp(self):
         super().setUp()
-        RefreshToken = get_refresh_token_model()
+        refresh_token_model = get_refresh_token_model()
         self.refresh_token = create_refresh_token(self.user)
-        self.refresh_token_admin = admin.RefreshTokenAdmin(RefreshToken, site)
+        self.refresh_token_admin = admin.RefreshTokenAdmin(
+            refresh_token_model, site)
 
 
 class AdminTests(AdminTestCase):

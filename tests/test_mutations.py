@@ -1,9 +1,10 @@
-import graphene
-
-import graphql_jwt
+import strawberry
+import strawberry_django_jwt.mutations
+from django.contrib.auth import get_user_model
 
 from . import mixins
-from .testcases import CookieTestCase, SchemaTestCase
+from .testcases import CookieTestCase
+from .testcases import SchemaTestCase
 
 
 class TokenAuthTests(mixins.TokenAuthMixin, SchemaTestCase):
@@ -11,25 +12,31 @@ class TokenAuthTests(mixins.TokenAuthMixin, SchemaTestCase):
     mutation TokenAuth($username: String!, $password: String!) {
       tokenAuth(username: $username, password: $password) {
         token
-        payload
+        payload {
+            username
+        }
         refreshExpiresIn
       }
     }'''
 
-    class Mutation(graphene.ObjectType):
-        token_auth = graphql_jwt.ObtainJSONWebToken.Field()
+    @strawberry.type
+    class Mutation:
+        token_auth = strawberry_django_jwt.mutations.ObtainJSONWebToken.obtain
 
 
 class VerifyTests(mixins.VerifyMixin, SchemaTestCase):
     query = '''
     mutation VerifyToken($token: String!) {
       verifyToken(token: $token) {
-        payload
+        payload {
+            username
+        }
       }
     }'''
 
-    class Mutation(graphene.ObjectType):
-        verify_token = graphql_jwt.Verify.Field()
+    @strawberry.type
+    class Mutation:
+        verify_token = strawberry_django_jwt.mutations.Verify.verify
 
 
 class RefreshTests(mixins.RefreshMixin, SchemaTestCase):
@@ -37,27 +44,35 @@ class RefreshTests(mixins.RefreshMixin, SchemaTestCase):
     mutation RefreshToken($token: String) {
       refreshToken(token: $token) {
         token
-        payload
+        payload {
+            username
+            origIat
+            exp
+        }
         refreshExpiresIn
       }
     }'''
 
-    class Mutation(graphene.ObjectType):
-        refresh_token = graphql_jwt.Refresh.Field()
+    @strawberry.type
+    class Mutation:
+        refresh_token = strawberry_django_jwt.mutations.Refresh.refresh
 
 
 class CookieTokenAuthTests(mixins.CookieTokenAuthMixin, CookieTestCase):
-    query = '''
-    mutation TokenAuth($username: String!, $password: String!) {
-      tokenAuth(username: $username, password: $password) {
+    query = f'''
+    mutation TokenAuth($username: String!, $password: String!) {{
+      tokenAuth(username: $username, password: $password) {{
         token
-        payload
+        payload {{
+            {get_user_model().USERNAME_FIELD}
+        }}
         refreshExpiresIn
-      }
-    }'''
+      }}
+    }}'''
 
-    class Mutation(graphene.ObjectType):
-        token_auth = graphql_jwt.ObtainJSONWebToken.Field()
+    @strawberry.type
+    class Mutation:
+        token_auth = strawberry_django_jwt.mutations.ObtainJSONWebToken.obtain
 
 
 class CookieRefreshTests(mixins.CookieRefreshMixin, CookieTestCase):
@@ -65,13 +80,16 @@ class CookieRefreshTests(mixins.CookieRefreshMixin, CookieTestCase):
     mutation {
       refreshToken {
         token
-        payload
+        payload {
+            username
+        }
         refreshExpiresIn
       }
     }'''
 
-    class Mutation(graphene.ObjectType):
-        refresh_token = graphql_jwt.Refresh.Field()
+    @strawberry.type
+    class Mutation:
+        refresh_token = strawberry_django_jwt.mutations.Refresh.refresh
 
 
 class DeleteCookieTests(mixins.DeleteCookieMixin, CookieTestCase):
@@ -82,5 +100,6 @@ class DeleteCookieTests(mixins.DeleteCookieMixin, CookieTestCase):
       }
     }'''
 
-    class Mutation(graphene.ObjectType):
-        delete_cookie = graphql_jwt.DeleteJSONWebTokenCookie.Field()
+    @strawberry.type
+    class Mutation:
+        delete_cookie = strawberry_django_jwt.mutations.DeleteJSONWebTokenCookie.delete_cookie

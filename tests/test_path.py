@@ -1,6 +1,6 @@
 from django.test import TestCase
-
-from graphql_jwt.path import PathDict, filter_strings
+from strawberry_django_jwt.path import filter_strings
+from strawberry_django_jwt.path import PathDict
 
 
 class FilterStringsTests(TestCase):

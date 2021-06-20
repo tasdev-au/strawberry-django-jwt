@@ -1,32 +1,37 @@
-import graphene
+from typing import Any
 
-from graphql_jwt.refresh_token.signals import (
-    refresh_token_revoked, refresh_token_rotated,
-)
-from graphql_jwt.settings import jwt_settings
-from graphql_jwt.shortcuts import create_refresh_token, get_refresh_token
-from graphql_jwt.signals import token_issued
+import strawberry
+from strawberry_django_jwt.refresh_token.signals import refresh_token_revoked
+from strawberry_django_jwt.refresh_token.signals import refresh_token_rotated
+from strawberry_django_jwt.settings import jwt_settings
+from strawberry_django_jwt.shortcuts import create_refresh_token
+from strawberry_django_jwt.shortcuts import get_refresh_token
+from strawberry_django_jwt.signals import token_issued
 
-from ..context_managers import (
-    back_to_the_future, catch_signal, refresh_expired,
-)
-from ..decorators import override_jwt_settings
+from ..context_managers import back_to_the_future
+from ..context_managers import catch_signal
+from ..context_managers import refresh_expired
+from ..decorators import OverrideJwtSettings
 
 
 class RefreshTokenMutationMixin:
+    Mutation: Any
 
-    @override_jwt_settings(JWT_LONG_RUNNING_REFRESH_TOKEN=True)
+    # noinspection PyPep8Naming
+    @OverrideJwtSettings(JWT_LONG_RUNNING_REFRESH_TOKEN=True)
     def setUp(self):
-        self.Mutation = type('jwt', (graphene.ObjectType,), {
-            name: mutation.Field() for name, mutation in
-            self.refresh_token_mutations.items()
+        m = type('jwt', (object,), {
+            **{name: mutation for name, mutation in
+               self.refresh_token_mutations.items()}
         })
+        self.Mutation = strawberry.type(m)
+
         super().setUp()
 
 
 class TokenAuthMixin(RefreshTokenMutationMixin):
 
-    @override_jwt_settings(JWT_LONG_RUNNING_REFRESH_TOKEN=True)
+    @OverrideJwtSettings(JWT_LONG_RUNNING_REFRESH_TOKEN=True)
     def test_token_auth(self):
         with catch_signal(token_issued) as token_issued_handler:
             response = self.execute({
@@ -45,7 +50,9 @@ class TokenAuthMixin(RefreshTokenMutationMixin):
 
 
 class RefreshTokenMixin:
+    refresh_token: Any
 
+    # noinspection PyPep8Naming
     def setUp(self):
         super().setUp()
         self.refresh_token = create_refresh_token(self.user)
@@ -56,7 +63,6 @@ class RefreshMixin(RefreshTokenMutationMixin, RefreshTokenMixin):
     def test_refresh_token(self):
         with catch_signal(refresh_token_rotated) as \
                 refresh_token_rotated_handler, back_to_the_future(seconds=1):
-
             response = self.execute({
                 'refreshToken': self.refresh_token.token,
             })
@@ -71,17 +77,16 @@ class RefreshMixin(RefreshTokenMutationMixin, RefreshTokenMixin):
 
         self.assertUsernameIn(payload)
         self.assertNotEqual(token, self.token)
-        self.assertGreater(payload['exp'], self.payload['exp'])
+        self.assertGreater(payload['exp'], self.payload.exp)
 
         self.assertNotEqual(refresh_token.token, self.refresh_token.token)
         self.assertEqual(refresh_token.user, self.user)
         self.assertGreater(refresh_token.created, self.refresh_token.created)
 
-    @override_jwt_settings(JWT_REUSE_REFRESH_TOKENS=True)
+    @OverrideJwtSettings(JWT_REUSE_REFRESH_TOKENS=True)
     def test_reuse_refresh_token(self):
         with catch_signal(refresh_token_rotated) as \
                 refresh_token_rotated_handler, back_to_the_future(seconds=1):
-
             response = self.execute({
                 'refreshToken': self.refresh_token.token,
             })
@@ -116,7 +121,6 @@ class RevokeMixin(RefreshTokenMixin):
     def test_revoke(self):
         with catch_signal(refresh_token_revoked) as \
                 refresh_token_revoked_handler:
-
             response = self.execute({
                 'refreshToken': self.refresh_token.token,
             })
@@ -131,7 +135,7 @@ class RevokeMixin(RefreshTokenMixin):
 
 class CookieTokenAuthMixin(RefreshTokenMutationMixin):
 
-    @override_jwt_settings(JWT_LONG_RUNNING_REFRESH_TOKEN=True)
+    @OverrideJwtSettings(JWT_LONG_RUNNING_REFRESH_TOKEN=True)
     def test_token_auth(self):
         with catch_signal(token_issued) as token_issued_handler:
             response = self.execute({
@@ -153,12 +157,12 @@ class CookieTokenAuthMixin(RefreshTokenMutationMixin):
 
 class CookieRefreshMixin(RefreshTokenMutationMixin):
 
+    @OverrideJwtSettings(JWT_LONG_RUNNING_REFRESH_TOKEN=True)
     def test_refresh_token(self):
         self.set_refresh_token_cookie()
 
         with catch_signal(refresh_token_rotated) as \
                 refresh_token_rotated_handler, back_to_the_future(seconds=1):
-
             response = self.execute()
 
         data = response.data['refreshToken']

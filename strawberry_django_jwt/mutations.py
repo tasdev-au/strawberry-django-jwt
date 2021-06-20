@@ -1,0 +1,78 @@
+import inspect
+from functools import wraps
+from typing import Optional
+
+import strawberry
+from django.contrib.auth import get_user_model
+from strawberry.arguments import StrawberryArgument
+from strawberry.django.context import StrawberryDjangoContext
+from strawberry.field import StrawberryField
+
+from . import mixins
+from .decorators import dispose_extra_kwargs
+from .decorators import ensure_token
+from .decorators import token_auth
+from .mixins import RequestInfoMixin
+from .object_types import DeleteType
+from .object_types import PayloadType
+from .object_types import TokenDataType
+from .object_types import TokenPayloadType
+from .refresh_token.mutations import DeleteRefreshTokenCookie
+from .refresh_token.mutations import Revoke
+
+__all__ = [
+    'JSONWebTokenMutation',
+    'ObtainJSONWebToken',
+    'Verify',
+    'Refresh',
+    'Revoke',
+    'DeleteRefreshTokenCookie',
+    'DeleteJSONWebTokenCookie'
+]
+
+from .settings import jwt_settings
+
+from .utils import get_payload
+
+
+class JSONWebTokenMutation(mixins.OptionalJSONWebTokenMixin):
+    def __init_subclass__(cls):
+        super().__init_subclass__()
+        user = get_user_model().USERNAME_FIELD
+        field: StrawberryField
+        for (name, field) in inspect.getmembers(cls, lambda f: isinstance(f, StrawberryField)):
+            field.arguments.extend([
+                StrawberryArgument(user, user, str),
+                StrawberryArgument('password', 'password', str),
+            ])
+
+
+class ObtainJSONWebToken(RequestInfoMixin, JSONWebTokenMutation):
+    """Obtain JSON Web Token mutation"""
+
+    @strawberry.mutation
+    @token_auth
+    @dispose_extra_kwargs
+    def obtain(self, info) -> TokenDataType:
+        return TokenDataType(payload=TokenPayloadType())
+
+
+class Verify(RequestInfoMixin):
+    @strawberry.mutation
+    @ensure_token
+    def verify(self, info, token: str) -> PayloadType:
+        return PayloadType(payload=get_payload(token, info.context))
+
+
+class Refresh(mixins.RefreshMixin):
+    pass
+
+
+class DeleteJSONWebTokenCookie(RequestInfoMixin):
+    @strawberry.mutation
+    def delete_cookie(self, info) -> DeleteType:
+        request = info.context.request if isinstance(
+            info.context, StrawberryDjangoContext) else info.context
+        request.delete_jwt_cookie = (jwt_settings.JWT_COOKIE_NAME in request.COOKIES and
+                                     getattr(request, 'jwt_cookie', False))
+        return DeleteType(deleted=request.delete_jwt_cookie)

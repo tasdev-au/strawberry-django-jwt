@@ -15,14 +15,18 @@
 __pycache__
 
 *.egg*
-/.cache
-/.coverage
-/.pytest_cache
-/.tox
+.cache
+.pytest_cache
+.tox/
+.nox/
+.mypy_cache/
+.coverage*
 
-/build
-/coverage.xml
-/dist
-/docs/_build
+build
+coverage.xml
+dist
 
 .venv/
+
+# Ignore generated requirements, use poetry.lock
+requirements.txt

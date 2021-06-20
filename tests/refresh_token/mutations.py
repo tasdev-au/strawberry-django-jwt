@@ -1,8 +1,5 @@
-import graphql_jwt
-from graphql_jwt.refresh_token.mixins import RefreshTokenMixin
+from strawberry_django_jwt.mixins import RefreshTokenMixin, JSONWebTokenMixin
 
 
-class Refresh(RefreshTokenMixin, graphql_jwt.Refresh):
-
-    class Arguments(RefreshTokenMixin.Fields):
-        """Refresh Arguments"""
+class Refresh(RefreshTokenMixin, JSONWebTokenMixin):
+    pass

@@ -1,9 +1,12 @@
-from graphql_jwt.refresh_token.models import AbstractRefreshToken
-from graphql_jwt.refresh_token.signals import refresh_token_revoked
-from graphql_jwt.settings import jwt_settings
-from graphql_jwt.shortcuts import create_refresh_token
+from time import sleep
 
-from ..context_managers import catch_signal, refresh_expired
+from strawberry_django_jwt.refresh_token.models import AbstractRefreshToken
+from strawberry_django_jwt.refresh_token.signals import refresh_token_revoked
+from strawberry_django_jwt.settings import jwt_settings
+from strawberry_django_jwt.shortcuts import create_refresh_token
+
+from ..context_managers import catch_signal
+from ..context_managers import refresh_expired
 from ..testcases import UserTestCase
 
 
@@ -56,6 +59,8 @@ class AbstractRefreshTokenTests(UserTestCase):
     def test_reuse(self):
         token = self.refresh_token.token
         created = self.refresh_token.created
+
+        sleep(0.0001)
 
         self.refresh_token.reuse()
 

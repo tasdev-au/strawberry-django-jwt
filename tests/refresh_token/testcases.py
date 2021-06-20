@@ -1,5 +1,5 @@
-from graphql_jwt.settings import jwt_settings
-from graphql_jwt.shortcuts import create_refresh_token
+from strawberry_django_jwt.settings import jwt_settings
+from strawberry_django_jwt.shortcuts import create_refresh_token
 
 from .. import testcases
 

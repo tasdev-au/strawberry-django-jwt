@@ -1,25 +1,25 @@
+import strawberry
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
+from strawberry_django_jwt.decorators import dispose_extra_kwargs
+from strawberry_django_jwt.mixins import OptionalJSONWebTokenMixin
+from strawberry_django_jwt.mixins import RequestInfoMixin
+from strawberry_django_jwt.model_object_types import UserType
+from strawberry_django_jwt.settings import jwt_settings
+from strawberry_django_jwt.shortcuts import get_token
 
-import graphene
-from graphene.types.generic import GenericScalar
-
-from graphql_jwt.settings import jwt_settings
-from graphql_jwt.shortcuts import get_token
-
-from .decorators import override_jwt_settings
+from .decorators import OverrideJwtSettings
 from .testcases import SchemaTestCase
 
 
 class QueriesTests(SchemaTestCase):
-
-    class Query(graphene.ObjectType):
-        test = GenericScalar(**{
-            jwt_settings.JWT_ARGUMENT_NAME: graphene.String(),
-        })
-
-        def resolve_test(self, info, **kwargs):
-            return info.context.user
+    @strawberry.type
+    class Query(RequestInfoMixin, OptionalJSONWebTokenMixin):
+        @strawberry.field
+        @dispose_extra_kwargs
+        def test(self, info) -> UserType:
+            ret = UserType(**info.context.user.__dict__)
+            return ret
 
     def setUp(self):
         super().setUp()
@@ -27,20 +27,27 @@ class QueriesTests(SchemaTestCase):
         self.other_user = get_user_model().objects.create_user('other')
         self.other_token = get_token(self.other_user)
 
-    @override_jwt_settings(JWT_ALLOW_ARGUMENT=True)
+    @OverrideJwtSettings(JWT_ALLOW_ARGUMENT=True)
     def test_multiple_credentials(self):
         query = '''
         query Tests($token: String!, $otherToken: String!) {{
-          testBegin: test
-          testToken: test({0}: $token)
-          testOtherToken: test({0}: $otherToken)
-          testInvalidToken: test({0}: "invalid")
-          testEnd: test
+          testBegin: test {{
+            username
+          }}
+          testToken: test({0}: $token) {{
+            username
+          }}
+          testOtherToken: test({0}: $otherToken) {{
+            username
+          }}
+          testEnd: test {{
+            username
+          }}
         }}'''.format(jwt_settings.JWT_ARGUMENT_NAME)
 
         headers = {
             jwt_settings.JWT_AUTH_HEADER_NAME:
-            f'{jwt_settings.JWT_AUTH_HEADER_PREFIX} {self.token}',
+                f'{jwt_settings.JWT_AUTH_HEADER_PREFIX} {self.token}',
         }
 
         variables = {
@@ -51,32 +58,62 @@ class QueriesTests(SchemaTestCase):
         response = self.client.execute(query, variables, **headers)
         data = response.data
 
-        self.assertEqual(data['testBegin'], self.user)
-        self.assertEqual(data['testEnd'], self.user)
-        self.assertEqual(data['testToken'], self.user)
-        self.assertEqual(data['testOtherToken'], self.other_user)
+        self.assertEqual(data['testBegin'].get("username"), self.user.username)
+        self.assertEqual(data['testEnd'].get("username"), self.user.username)
+        self.assertEqual(data['testToken'].get("username"), self.user.username)
+        self.assertEqual(data['testOtherToken'].get(
+            "username"), self.other_user.username)
 
-        self.assertIsNone(data['testInvalidToken'])
+        self.assertIsNone(response.errors)
+
+    @OverrideJwtSettings(JWT_ALLOW_ARGUMENT=True)
+    def test_invalid_credentials(self):
+        query = '''
+        query Tests {{
+          testInvalidToken: test({0}: "invalid") {{
+            username
+          }}
+        }}'''.format(jwt_settings.JWT_ARGUMENT_NAME)
+
+        headers = {
+            jwt_settings.JWT_AUTH_HEADER_NAME:
+                f'{jwt_settings.JWT_AUTH_HEADER_PREFIX} {self.token}',
+        }
+
+        response = self.client.execute(query, **headers)
+        data = response.data
+
+        self.assertIsNone(data)
         self.assertEqual(len(response.errors), 1)
 
-    @override_jwt_settings(
+    @OverrideJwtSettings(
         JWT_ALLOW_ARGUMENT=True,
         JWT_ALLOW_ANY_CLASSES=[
-            'graphene.types.generic.GenericScalar',
+            'graphql.type.definition.GraphQLObjectType',
         ])
     def test_allow_any(self):
         query = f'''
         {{
-          testAllowAny: test
-          testInvalidToken: test({jwt_settings.JWT_ARGUMENT_NAME}: "invalid")
+          testAllowAny: test {{
+            username
+            id
+          }}
+          testInvalidToken: test({jwt_settings.JWT_ARGUMENT_NAME}: "invalid") {{
+            username
+            id
+          }}
         }}'''
 
         headers = {
             jwt_settings.JWT_AUTH_HEADER_NAME:
-            f'{jwt_settings.JWT_AUTH_HEADER_PREFIX} invalid',
+                f'{jwt_settings.JWT_AUTH_HEADER_PREFIX} invalid',
         }
 
         response = self.client.execute(query, **headers)
 
-        self.assertIsInstance(response.data['testAllowAny'], AnonymousUser)
-        self.assertIsInstance(response.data['testInvalidToken'], AnonymousUser)
+        self.assertIsNone(
+            response.data['testAllowAny'].get("id"), AnonymousUser)
+        self.assertEqual(response.data['testAllowAny'].get("username"), "")
+        self.assertIsNone(
+            response.data['testInvalidToken'].get("id"), AnonymousUser)
+        self.assertEqual(response.data['testInvalidToken'].get("username"), "")

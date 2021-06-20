@@ -1,8 +1,9 @@
-from django.contrib.auth.models import AnonymousUser, Permission
+from django.contrib.auth.models import AnonymousUser
+from django.contrib.auth.models import Permission
+from strawberry_django_jwt import decorators
+from strawberry_django_jwt import exceptions
 
-from graphql_jwt import decorators, exceptions
-
-from .decorators import override_jwt_settings
+from .decorators import OverrideJwtSettings
 from .testcases import TestCase
 
 
@@ -99,11 +100,11 @@ class PermissionRequiredTests(TestCase):
 
 class CSRFRotationTests(TestCase):
 
-    @override_jwt_settings(JWT_CSRF_ROTATION=True)
+    @OverrideJwtSettings(JWT_CSRF_ROTATION=True)
     def test_csrf_rotation(self):
         info_mock = self.info(AnonymousUser())
         decorators.csrf_rotation(
-            lambda cls, root, info, *args, **kwargs: None,
-        )(self, None, info_mock)
+            lambda cls, info, *args, **kwargs: None,
+        )(self, info_mock)
 
         self.assertTrue(info_mock.context.csrf_cookie_needs_reset)

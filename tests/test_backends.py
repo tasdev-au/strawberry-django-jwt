@@ -1,6 +1,6 @@
-from graphql_jwt.backends import JSONWebTokenBackend
-from graphql_jwt.exceptions import JSONWebTokenError
-from graphql_jwt.settings import jwt_settings
+from strawberry_django_jwt.backends import JSONWebTokenBackend
+from strawberry_django_jwt.exceptions import JSONWebTokenError
+from strawberry_django_jwt.settings import jwt_settings
 
 from .testcases import TestCase
 

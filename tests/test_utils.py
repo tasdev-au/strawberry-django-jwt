@@ -1,14 +1,30 @@
+import importlib
 from datetime import timedelta
+from functools import wraps
+from types import ModuleType
 from unittest import mock
 
+import strawberry_django_jwt.object_types
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import rsa
+from strawberry_django_jwt import exceptions
+from strawberry_django_jwt import utils
+from strawberry_django_jwt.object_types import TokenPayloadType
+from strawberry_django_jwt.settings import jwt_settings
 
-from graphql_jwt import exceptions, utils
-from graphql_jwt.settings import jwt_settings
-
-from .decorators import override_jwt_settings
+from .decorators import OverrideJwtSettings
 from .testcases import TestCase
+
+
+def reload_import(imp: ModuleType):
+    def wrap(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            importlib.reload(imp)
+            return fn(*args, **kwargs)
+
+        return wrapper
+    return wrap
 
 
 class JWTPayloadTests(TestCase):
@@ -21,15 +37,17 @@ class JWTPayloadTests(TestCase):
 
         self.assertEqual(username, 'test')
 
-    @override_jwt_settings(JWT_AUDIENCE='test')
+    @OverrideJwtSettings(JWT_AUDIENCE='test')
+    @reload_import(strawberry_django_jwt.utils.object_types)
     def test_audience(self):
         payload = utils.jwt_payload(self.user)
-        self.assertEqual(payload['aud'], 'test')
+        self.assertEqual(payload.aud, 'test')
 
-    @override_jwt_settings(JWT_ISSUER='test')
+    @OverrideJwtSettings(JWT_ISSUER='test')
+    @reload_import(strawberry_django_jwt.utils.object_types)
     def test_issuer(self):
         payload = utils.jwt_payload(self.user)
-        self.assertEqual(payload['iss'], 'test')
+        self.assertEqual(payload.iss, 'test')
 
 
 class AsymmetricAlgorithmsTests(TestCase):
@@ -43,11 +61,10 @@ class AsymmetricAlgorithmsTests(TestCase):
         public_key = private_key.public_key()
         payload = utils.jwt_payload(self.user)
 
-        with override_jwt_settings(
+        with OverrideJwtSettings(
                 JWT_PUBLIC_KEY=public_key,
                 JWT_PRIVATE_KEY=private_key,
                 JWT_ALGORITHM='RS256'):
-
             token = utils.jwt_encode(payload)
             decoded = utils.jwt_decode(token)
 
@@ -59,7 +76,7 @@ class GetHTTPAuthorizationHeaderTests(TestCase):
     def test_get_authorization_header(self):
         headers = {
             jwt_settings.JWT_AUTH_HEADER_NAME:
-            f'{jwt_settings.JWT_AUTH_HEADER_PREFIX} {self.token}',
+                f'{jwt_settings.JWT_AUTH_HEADER_PREFIX} {self.token}',
         }
 
         request = self.request_factory.get('/', **headers)
@@ -80,7 +97,7 @@ class GetHTTPAuthorizationHeaderTests(TestCase):
     def test_get_authorization_cookie(self):
         headers = {
             jwt_settings.JWT_AUTH_HEADER_NAME:
-            f'{jwt_settings.JWT_AUTH_HEADER_PREFIX} {self.token}',
+                f'{jwt_settings.JWT_AUTH_HEADER_PREFIX} {self.token}',
         }
 
         request = self.request_factory.get('/', **headers)
@@ -92,7 +109,7 @@ class GetHTTPAuthorizationHeaderTests(TestCase):
 
 class GetCredentialsTests(TestCase):
 
-    @override_jwt_settings(JWT_ALLOW_ARGUMENT=True)
+    @OverrideJwtSettings(JWT_ALLOW_ARGUMENT=True)
     def test_argument_allowed(self):
         kwargs = {
             jwt_settings.JWT_ARGUMENT_NAME: self.token,
@@ -103,7 +120,7 @@ class GetCredentialsTests(TestCase):
 
         self.assertEqual(credentials, self.token)
 
-    @override_jwt_settings(JWT_ALLOW_ARGUMENT=True)
+    @OverrideJwtSettings(JWT_ALLOW_ARGUMENT=True)
     def test_input_argument(self):
         kwargs = {
             'input': {
@@ -116,7 +133,7 @@ class GetCredentialsTests(TestCase):
 
         self.assertEqual(credentials, self.token)
 
-    @override_jwt_settings(JWT_ALLOW_ARGUMENT=True)
+    @OverrideJwtSettings(JWT_ALLOW_ARGUMENT=True)
     def test_missing_argument(self):
         request = self.request_factory.get('/')
         credentials = utils.get_credentials(request)
@@ -126,7 +143,7 @@ class GetCredentialsTests(TestCase):
 
 class GetPayloadTests(TestCase):
 
-    @override_jwt_settings(
+    @OverrideJwtSettings(
         JWT_VERIFY_EXPIRATION=True,
         JWT_EXPIRATION_DELTA=timedelta(seconds=-1))
     def test_expired_signature(self):
@@ -140,7 +157,7 @@ class GetPayloadTests(TestCase):
         payload = utils.jwt_payload(self.user)
         token = utils.jwt_encode(payload)
 
-        with override_jwt_settings(JWT_AUDIENCE='test'):
+        with OverrideJwtSettings(JWT_AUDIENCE='test'):
             with self.assertRaises(exceptions.JSONWebTokenError):
                 utils.get_payload(token)
 
@@ -160,7 +177,7 @@ class GetUserByPayloadTests(TestCase):
 
     def test_user_by_invalid_payload(self):
         with self.assertRaises(exceptions.JSONWebTokenError):
-            utils.get_user_by_payload({})
+            utils.get_user_by_payload(TokenPayloadType())
 
     @mock.patch('django.contrib.auth.models.User.is_active',
                 new_callable=mock.PropertyMock,

@@ -1,9 +1,8 @@
-import graphene
+import strawberry
+import strawberry_django_jwt.mutations
 
-import graphql_jwt
-
-from ..testcases import SchemaTestCase
 from . import mixins
+from ..testcases import SchemaTestCase
 from .mutations import Refresh
 from .testcases import CookieTestCase
 
@@ -13,14 +12,16 @@ class TokenAuthTests(mixins.TokenAuthMixin, SchemaTestCase):
     mutation TokenAuth($username: String!, $password: String!) {
       tokenAuth(username: $username, password: $password) {
         token
-        payload
+        payload {
+            username
+        }
         refreshToken
         refreshExpiresIn
       }
     }'''
 
     refresh_token_mutations = {
-        'token_auth': graphql_jwt.ObtainJSONWebToken,
+        'token_auth': strawberry_django_jwt.mutations.ObtainJSONWebToken.obtain,
     }
 
 
@@ -29,14 +30,18 @@ class RefreshTests(mixins.RefreshMixin, SchemaTestCase):
     mutation RefreshToken($refreshToken: String) {
       refreshToken(refreshToken: $refreshToken) {
         token
-        payload
+        payload {
+            username
+            origIat
+            exp
+        }
         refreshToken
         refreshExpiresIn
       }
     }'''
 
     refresh_token_mutations = {
-        'refresh_token': Refresh,
+        'refresh_token': Refresh.refresh,
     }
 
 
@@ -48,8 +53,9 @@ class RevokeTests(mixins.RevokeMixin, SchemaTestCase):
       }
     }'''
 
-    class Mutation(graphene.ObjectType):
-        revoke_token = graphql_jwt.Revoke.Field()
+    @strawberry.type
+    class Mutation:
+        revoke_token = strawberry_django_jwt.mutations.Revoke.revoke
 
 
 class CookieTokenAuthTests(mixins.CookieTokenAuthMixin, CookieTestCase):
@@ -57,14 +63,17 @@ class CookieTokenAuthTests(mixins.CookieTokenAuthMixin, CookieTestCase):
     mutation TokenAuth($username: String!, $password: String!) {
       tokenAuth(username: $username, password: $password) {
         token
-        payload
+        payload {
+            username
+            origIat
+        }
         refreshToken
         refreshExpiresIn
       }
     }'''
 
     refresh_token_mutations = {
-        'token_auth': graphql_jwt.ObtainJSONWebToken,
+        'token_auth': strawberry_django_jwt.mutations.ObtainJSONWebToken.obtain,
     }
 
 
@@ -73,14 +82,16 @@ class CookieRefreshTests(mixins.CookieRefreshMixin, CookieTestCase):
     mutation {
       refreshToken {
         token
-        payload
+        payload {
+          username
+        }
         refreshToken
         refreshExpiresIn
       }
     }'''
 
     refresh_token_mutations = {
-        'refresh_token': Refresh,
+        'refresh_token': Refresh.refresh,
     }
 
 
@@ -92,5 +103,6 @@ class DeleteCookieTests(mixins.DeleteCookieMixin, CookieTestCase):
       }
     }'''
 
-    class Mutation(graphene.ObjectType):
-        delete_cookie = graphql_jwt.DeleteRefreshTokenCookie.Field()
+    @strawberry.type
+    class Mutation:
+        delete_cookie = strawberry_django_jwt.mutations.DeleteRefreshTokenCookie.delete_cookie

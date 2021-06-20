@@ -1,5 +1,5 @@
-from graphql_jwt import shortcuts
-from graphql_jwt.exceptions import JSONWebTokenError
+from strawberry_django_jwt import shortcuts
+from strawberry_django_jwt.exceptions import JSONWebTokenError
 
 from ..testcases import UserTestCase
 

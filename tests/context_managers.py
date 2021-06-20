@@ -1,8 +1,9 @@
 from contextlib import contextmanager
-from datetime import datetime, timedelta
+from datetime import datetime
+from datetime import timedelta
 from unittest import mock
 
-from graphql_jwt.settings import jwt_settings
+from strawberry_django_jwt.settings import jwt_settings
 
 
 @contextmanager
@@ -15,7 +16,7 @@ def catch_signal(signal):
 
 @contextmanager
 def back_to_the_future(**kwargs):
-    with mock.patch('graphql_jwt.utils.datetime') as datetime_mock:
+    with mock.patch('strawberry_django_jwt.utils.datetime') as datetime_mock:
         datetime_mock.utcnow.return_value =\
             datetime.utcnow() + timedelta(**kwargs)
         yield datetime_mock
