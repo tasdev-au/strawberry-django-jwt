@@ -1,7 +1,6 @@
 from datetime import datetime
 
 import strawberry
-
 from strawberry_django_jwt.object_types import TokenPayloadType
 
 

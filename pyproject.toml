@@ -49,5 +49,3 @@ python_files = "tests.py test_*.py *_tests.py"
 [build-system]
 requires = ["poetry>=0.12"]
 build-backend = "poetry.masonry.api"
-
-

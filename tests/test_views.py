@@ -2,7 +2,6 @@ import json
 
 import strawberry
 from django.contrib.auth import get_user_model
-
 from strawberry_django_jwt.decorators import login_required
 from strawberry_django_jwt.middleware import JSONWebTokenMiddleware
 from strawberry_django_jwt.mixins import OptionalJSONWebTokenMixin
@@ -11,6 +10,7 @@ from strawberry_django_jwt.settings import jwt_settings
 from strawberry_django_jwt.shortcuts import get_token
 from strawberry_django_jwt.testcases import JSONWebTokenClient
 from strawberry_django_jwt.views import StatusHandlingGraphQLView
+
 from .testcases import SchemaTestCase
 
 

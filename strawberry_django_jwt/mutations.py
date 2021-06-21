@@ -69,6 +69,7 @@ class DeleteJSONWebTokenCookie(RequestInfoMixin):
     @strawberry.mutation
     def delete_cookie(self, info) -> DeleteType:
         ctx = get_context(info)
-        ctx.delete_jwt_cookie = (jwt_settings.JWT_COOKIE_NAME in ctx.COOKIES and
-                                 getattr(ctx, 'jwt_cookie', False))
-        return DeleteType(deleted=ctx.delete_jwt_cookie)
+        setattr(ctx,
+                "delete_jwt_cookie",
+                jwt_settings.JWT_COOKIE_NAME in ctx.COOKIES and getattr(ctx, 'jwt_cookie', False))
+        return DeleteType(deleted=getattr(ctx, "delete_jwt_cookie"))

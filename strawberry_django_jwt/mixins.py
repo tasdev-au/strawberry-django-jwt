@@ -11,19 +11,20 @@ from strawberry.field import StrawberryField
 
 from . import exceptions
 from . import settings
-from . import signals
 from .decorators import csrf_rotation
 from .decorators import ensure_token
 from .decorators import refresh_expiration
 from .decorators import setup_jwt_cookie
 from .fields import ExtendedStrawberryField
 from .object_types import TokenDataType
+from .object_types import TokenPayloadType
 from .refresh_token import signals as refresh_signals
 from .refresh_token.decorators import ensure_refresh_token
 from .refresh_token.object_types import RefreshedTokenType
 from .refresh_token.shortcuts import create_refresh_token
 from .refresh_token.shortcuts import get_refresh_token
 from .refresh_token.shortcuts import refresh_token_lazy
+from .signals import token_refreshed
 from .utils import get_payload
 from .utils import get_user_by_payload
 from .utils import maybe_thenable
@@ -71,7 +72,7 @@ class BaseRefreshMixin:
     @csrf_rotation
     @ensure_token
     def refresh(self, info, token: Optional[str]) -> TokenDataType:
-        return TokenDataType()
+        return TokenDataType(payload=TokenPayloadType())
 
 
 class KeepAliveRefreshMixin(BaseRefreshMixin, OptionalJSONWebTokenMixin):
@@ -99,11 +100,11 @@ class KeepAliveRefreshMixin(BaseRefreshMixin, OptionalJSONWebTokenMixin):
         payload = settings.jwt_settings.JWT_PAYLOAD_HANDLER(user, context)
         payload.origIat = orig_iat
         refresh_expires_in = orig_iat + \
-                             settings.jwt_settings.JWT_REFRESH_EXPIRATION_DELTA.total_seconds()
+            settings.jwt_settings.JWT_REFRESH_EXPIRATION_DELTA.total_seconds()
 
         token = settings.jwt_settings.JWT_ENCODE_HANDLER(
             payload, context) or ""
-        signals.token_refreshed.send(
+        token_refreshed.send(
             sender=RefreshMixin, request=context, user=user)
 
         result = TokenDataType(payload, token, refresh_expires_in)

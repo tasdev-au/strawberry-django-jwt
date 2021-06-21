@@ -1,14 +1,13 @@
 import strawberry
-from strawberry.django.context import StrawberryDjangoContext
 from strawberry.types import Info
 
 from ..mixins import RequestInfoMixin
 from ..object_types import DeleteType
 from ..settings import jwt_settings
+from ..utils import get_context
 from .decorators import ensure_refresh_token
 from .object_types import RevokeType
 from .shortcuts import get_refresh_token
-from ..utils import get_context
 
 
 class Revoke(RequestInfoMixin):
@@ -25,8 +24,7 @@ class DeleteRefreshTokenCookie(RequestInfoMixin):
     @strawberry.mutation
     def delete_cookie(self, info: Info) -> DeleteType:
         ctx = get_context(info)
-        ctx.delete_refresh_token_cookie = (
-            jwt_settings.JWT_REFRESH_TOKEN_COOKIE_NAME in ctx.COOKIES and
-            getattr(ctx, 'jwt_cookie', False)
-        )
-        return DeleteType(deleted=ctx.delete_refresh_token_cookie)
+        setattr(ctx,
+                "delete_refresh_token_cookie",
+                jwt_settings.JWT_REFRESH_TOKEN_COOKIE_NAME in ctx.COOKIES and getattr(ctx, 'jwt_cookie', False))
+        return DeleteType(deleted=getattr(ctx, "delete_refresh_token_cookie"))

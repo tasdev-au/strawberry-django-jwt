@@ -3,7 +3,10 @@ import inspect
 from calendar import timegm
 from datetime import datetime
 from inspect import isawaitable
-from typing import List, Optional, Union, Any
+from typing import Any
+from typing import List
+from typing import Optional
+from typing import Union
 
 import django
 import jwt
@@ -191,9 +194,9 @@ def maybe_thenable(obj, on_resolve):
     return on_resolve(obj)
 
 
-def get_context(info: Any) -> Optional[Union[HttpRequest, HttpRequest]]:
+def get_context(info: Any) -> Union[HttpRequest, HttpRequest]:
     if info is None:
-        return None
+        return HttpRequest()
     if isinstance(info, StrawberryDjangoContext):
         return info.request
     if issubclass(type(info), HttpRequest):
@@ -213,11 +216,14 @@ def get_class_that_defined_method(meth):
         for cls in inspect.getmro(meth.__self__.__class__):
             if meth.__name__ in cls.__dict__:
                 return cls
-        meth = getattr(meth, '__func__', meth)  # fallback to __qualname__ parsing
+        # fallback to __qualname__ parsing
+        meth = getattr(meth, '__func__', meth)
     if inspect.isfunction(meth):
         cls = getattr(inspect.getmodule(meth),
-                      meth.__qualname__.split('.<locals>', 1)[0].rsplit('.', 1)[0],
+                      meth.__qualname__.split('.<locals>', 1)[
+                          0].rsplit('.', 1)[0],
                       None)
         if isinstance(cls, type):
             return cls
-    return getattr(meth, '__objclass__', None)  # handle special descriptor objects
+    # handle special descriptor objects
+    return getattr(meth, '__objclass__', None)

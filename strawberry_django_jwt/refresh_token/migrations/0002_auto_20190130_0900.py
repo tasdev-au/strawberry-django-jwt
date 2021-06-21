@@ -9,6 +9,7 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AlterModelOptions(
             name='refreshtoken',
-            options={'verbose_name': 'refresh token', 'verbose_name_plural': 'refresh tokens'},
+            options={'verbose_name': 'refresh token',
+                     'verbose_name_plural': 'refresh tokens'},
         ),
     ]

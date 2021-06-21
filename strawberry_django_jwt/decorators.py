@@ -14,7 +14,8 @@ from . import signals
 from .refresh_token.shortcuts import create_refresh_token
 from .refresh_token.shortcuts import refresh_token_lazy
 from .settings import jwt_settings
-from .utils import delete_cookie, get_context
+from .utils import delete_cookie
+from .utils import get_context
 from .utils import maybe_thenable
 from .utils import set_cookie
 
@@ -132,8 +133,8 @@ def refresh_expiration(f):
     def wrapper(cls, *args, **kwargs):
         def on_resolve(payload):
             payload.refresh_expires_in = (
-                    timegm(datetime.utcnow().utctimetuple()) +
-                    jwt_settings.JWT_REFRESH_EXPIRATION_DELTA.total_seconds()
+                timegm(datetime.utcnow().utctimetuple()) +
+                jwt_settings.JWT_REFRESH_EXPIRATION_DELTA.total_seconds()
             )
             return payload
 
@@ -191,7 +192,7 @@ def jwt_cookie(view_func):
             if hasattr(request, 'jwt_refresh_token'):
                 refresh_token = request.jwt_refresh_token
                 expires = refresh_token.created + \
-                          jwt_settings.JWT_REFRESH_EXPIRATION_DELTA
+                    jwt_settings.JWT_REFRESH_EXPIRATION_DELTA
 
                 set_cookie(
                     response,

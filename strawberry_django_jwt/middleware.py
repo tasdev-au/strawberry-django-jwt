@@ -5,7 +5,8 @@ from graphql import GraphQLType
 
 from .path import PathDict
 from .settings import jwt_settings
-from .utils import get_http_authorization, get_context
+from .utils import get_context
+from .utils import get_http_authorization
 from .utils import get_token_argument
 
 __all__ = [
