@@ -1,16 +1,15 @@
 import json
 from unittest import mock
 
+import django
 import strawberry
 from django.contrib.auth import get_user_model
-from django.test import AsyncRequestFactory  # type: ignore
 from django.test import RequestFactory
 from django.test import testcases
 from graphql.execution.execute import GraphQLResolveInfo
 from strawberry.django.views import GraphQLView
 from strawberry_django_jwt.decorators import jwt_cookie
 from strawberry_django_jwt.settings import jwt_settings
-from strawberry_django_jwt.testcases import AsyncJSONWebTokenTestCase
 from strawberry_django_jwt.testcases import JSONWebTokenClient
 from strawberry_django_jwt.testcases import JSONWebTokenTestCase
 from strawberry_django_jwt.utils import jwt_encode
@@ -18,15 +17,6 @@ from strawberry_django_jwt.utils import jwt_payload
 
 
 class UserTestCase(testcases.TestCase):
-
-    def setUp(self):
-        self.user = get_user_model().objects.create_user(
-            username='test',
-            password='dolphins',
-        )
-
-
-class AsyncUserTestCase(testcases.TransactionTestCase):
 
     def setUp(self):
         self.user = get_user_model().objects.create_user(
@@ -56,48 +46,7 @@ class TestCase(UserTestCase):
         )
 
 
-class AsyncTestCase(AsyncUserTestCase):
-
-    def setUp(self):
-        super().setUp()
-        self.payload = jwt_payload(self.user)
-        self.token = jwt_encode(self.payload)
-        self.request_factory = AsyncRequestFactory()
-
-    def info(self, user=None, **headers):
-        request = self.request_factory.post('/', **headers)
-
-        if user is not None:
-            request.user = user
-
-        return mock.Mock(
-            context=request,
-            path=['test'],
-            spec=GraphQLResolveInfo,
-        )
-
-
 class SchemaTestCase(TestCase, JSONWebTokenTestCase):
-    @strawberry.type
-    class Query:
-        test: str
-
-    Mutation = None
-
-    def setUp(self):
-        super().setUp()
-        self.client.schema(query=self.Query, mutation=self.Mutation)
-
-    def execute(self, variables=None):
-        assert self.query, ('`query` property not specified')
-        return self.client.execute(self.query, variables)
-
-    def assertUsernameIn(self, payload):
-        username = payload[self.user.USERNAME_FIELD]
-        self.assertEqual(self.user.get_username(), username)
-
-
-class AsyncSchemaTestCase(AsyncTestCase, AsyncJSONWebTokenTestCase):
     @strawberry.type
     class Query:
         test: str
@@ -155,3 +104,58 @@ class CookieTestCase(SchemaTestCase):
 
 class RelayCookieTestCase(RelaySchemaTestCase, CookieTestCase):
     """RelayCookieTestCase"""
+
+
+if django.VERSION[:2] >= (3, 1):
+    from django.test import AsyncRequestFactory  # type: ignore
+    from strawberry_django_jwt.testcases import AsyncJSONWebTokenTestCase
+
+
+    class AsyncUserTestCase(testcases.TransactionTestCase):
+
+        def setUp(self):
+            self.user = get_user_model().objects.create_user(
+                username='test',
+                password='dolphins',
+            )
+
+
+    class AsyncTestCase(AsyncUserTestCase):
+
+        def setUp(self):
+            super().setUp()
+            self.payload = jwt_payload(self.user)
+            self.token = jwt_encode(self.payload)
+            self.request_factory = AsyncRequestFactory()
+
+        def info(self, user=None, **headers):
+            request = self.request_factory.post('/', **headers)
+
+            if user is not None:
+                request.user = user
+
+            return mock.Mock(
+                context=request,
+                path=['test'],
+                spec=GraphQLResolveInfo,
+            )
+
+
+    class AsyncSchemaTestCase(AsyncTestCase, AsyncJSONWebTokenTestCase):
+        @strawberry.type
+        class Query:
+            test: str
+
+        Mutation = None
+
+        def setUp(self):
+            super().setUp()
+            self.client.schema(query=self.Query, mutation=self.Mutation)
+
+        def execute(self, variables=None):
+            assert self.query, ('`query` property not specified')
+            return self.client.execute(self.query, variables)
+
+        def assertUsernameIn(self, payload):
+            username = payload[self.user.USERNAME_FIELD]
+            self.assertEqual(self.user.get_username(), username)

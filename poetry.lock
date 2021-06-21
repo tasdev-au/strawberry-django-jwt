@@ -567,7 +567,7 @@ description = "Typing stubs for enum34"
 name = "types-enum34"
 optional = false
 python-versions = "*"
-version = "0.1.6"
+version = "0.1.7"
 
 [[package]]
 category = "dev"
@@ -575,7 +575,7 @@ description = "Typing stubs for ipaddress"
 name = "types-ipaddress"
 optional = false
 python-versions = "*"
-version = "0.1.3"
+version = "0.1.4"
 
 [[package]]
 category = "main"
@@ -954,12 +954,12 @@ types-cryptography = [
     {file = "types_cryptography-3.3.3-py2.py3-none-any.whl", hash = "sha256:524afedb2e7f3fa4b22bd164efb82809a75ff960cc5d40a2fa9b7c2cda228fab"},
 ]
 types-enum34 = [
-    {file = "types-enum34-0.1.6.tar.gz", hash = "sha256:93b1bfeb3654b0745f37b6d8e1b3a1d4141b371464e58ca577075fb086bd97d4"},
-    {file = "types_enum34-0.1.6-py2.py3-none-any.whl", hash = "sha256:893675130c66f1af3ff5a6f20b9c358a425873664dd2fae417f4dabd57077ab8"},
+    {file = "types-enum34-0.1.7.tar.gz", hash = "sha256:009228c0feb8a72a78ae299a8683cdb766a4cfc2499730ec78f01885d6bc6dec"},
+    {file = "types_enum34-0.1.7-py3-none-any.whl", hash = "sha256:ae44abe68ec856565fc6eabe9f54e967c5d3eb406ba75448db0c41045918c8e7"},
 ]
 types-ipaddress = [
-    {file = "types-ipaddress-0.1.3.tar.gz", hash = "sha256:df1d9ea04e16315ae34b77bc0ccd39b2fefd8eb45192ba85972a4e186369782c"},
-    {file = "types_ipaddress-0.1.3-py2.py3-none-any.whl", hash = "sha256:f1a08a0a635910f7be2d1cb3b8ec49ccc4f5969d9a8553e278f3d072fa6a9465"},
+    {file = "types-ipaddress-0.1.4.tar.gz", hash = "sha256:a03f47c0f6c9ea49b95e2af8f47742f8bbca81c2373fc1ca41109cee4d0cb8c0"},
+    {file = "types_ipaddress-0.1.4-py3-none-any.whl", hash = "sha256:570406d4ea93c7523731145adc302d8d8167aedb2d33c3b7f4fbe6105ba3ec45"},
 ]
 typing-extensions = [
     {file = "typing_extensions-3.10.0.0-py2-none-any.whl", hash = "sha256:0ac0f89795dd19de6b97debb0c6af1c70987fd80a2d62d1958f7e56fcc31b497"},
