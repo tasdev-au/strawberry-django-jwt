@@ -5,7 +5,7 @@ from graphql import GraphQLType
 
 from .path import PathDict
 from .settings import jwt_settings
-from .utils import get_http_authorization
+from .utils import get_http_authorization, get_context
 from .utils import get_token_argument
 
 __all__ = [
@@ -66,7 +66,7 @@ class JSONWebTokenMiddleware:
         return False
 
     def resolve(self, next_, root, info, **kwargs):
-        context = info.context
+        context = get_context(info)
         token_argument = get_token_argument(context, **kwargs)
 
         if jwt_settings.JWT_ALLOW_ARGUMENT and token_argument is None:

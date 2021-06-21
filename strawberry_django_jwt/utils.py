@@ -1,13 +1,15 @@
+import functools
+import inspect
 from calendar import timegm
 from datetime import datetime
 from inspect import isawaitable
-from typing import List
+from typing import List, Optional, Union, Any
 
 import django
 import jwt
 from django.contrib.auth import get_user_model
+from django.http import HttpRequest
 from django.utils.translation import gettext as _
-from strawberry import Schema
 from strawberry.django.context import StrawberryDjangoContext
 
 from . import exceptions
@@ -72,9 +74,7 @@ def jwt_decode(token: str, context=None) -> object_types.TokenPayloadType:
 
 
 def get_http_authorization(context):
-    req = context.request \
-        if isinstance(context, StrawberryDjangoContext) \
-        else context
+    req = get_context(context)
     auth = req.META.get(jwt_settings.JWT_AUTH_HEADER_NAME, '').split()
     prefix = jwt_settings.JWT_AUTH_HEADER_PREFIX
 
@@ -189,3 +189,35 @@ def maybe_thenable(obj, on_resolve):
 
     # If it's not awaitable, return the function executed over the object
     return on_resolve(obj)
+
+
+def get_context(info: Any) -> Optional[Union[HttpRequest, HttpRequest]]:
+    if info is None:
+        return None
+    if isinstance(info, StrawberryDjangoContext):
+        return info.request
+    if issubclass(type(info), HttpRequest):
+        return info
+    ctx = info.context
+    if isinstance(ctx, StrawberryDjangoContext):
+        return ctx.request
+    return ctx
+
+
+def get_class_that_defined_method(meth):
+    if isinstance(meth, functools.partial):
+        return get_class_that_defined_method(meth.func)
+    if inspect.ismethod(meth) or (
+            inspect.isbuiltin(meth)
+            and getattr(meth, '__self__', None) is not None and getattr(meth.__self__, '__class__', None)):
+        for cls in inspect.getmro(meth.__self__.__class__):
+            if meth.__name__ in cls.__dict__:
+                return cls
+        meth = getattr(meth, '__func__', meth)  # fallback to __qualname__ parsing
+    if inspect.isfunction(meth):
+        cls = getattr(inspect.getmodule(meth),
+                      meth.__qualname__.split('.<locals>', 1)[0].rsplit('.', 1)[0],
+                      None)
+        if isinstance(cls, type):
+            return cls
+    return getattr(meth, '__objclass__', None)  # handle special descriptor objects

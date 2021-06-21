@@ -5,15 +5,14 @@ from strawberry.django.context import StrawberryDjangoContext
 
 from .. import exceptions
 from ..settings import jwt_settings
+from ..utils import get_context
 
 
 def ensure_refresh_token(f):
     @wraps(f)
     def wrapper(cls, info, refresh_token=None, *args, **kwargs):
         if refresh_token is None:
-            cookies = info.context.request.COOKIES \
-                if isinstance(info.context, StrawberryDjangoContext) \
-                else info.context.COOKIES
+            cookies = get_context(info).COOKIES
             refresh_token = cookies.get(
                 jwt_settings.JWT_REFRESH_TOKEN_COOKIE_NAME,
             )

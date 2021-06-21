@@ -95,7 +95,6 @@ class JWTSettings:
         if attr == 'JWT_ALLOW_ANY_CLASSES':
             value = list(value) + [
                 'strawberry_django_jwt.mixins.JSONWebTokenMixin',
-                'graphql.type.definition.GraphQLScalarType',
             ]
 
         if attr in self.import_strings:

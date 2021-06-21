@@ -12,33 +12,40 @@ class UserPassesTests(TestCase):
     def test_user_passes_test(self):
         result = decorators.user_passes_test(
             lambda u: u.pk == self.user.pk,
-        )(lambda info: None)(self.info(self.user))
+        )(lambda src, info: None)(None, info=self.info(self.user))
 
         self.assertIsNone(result)
 
     def test_permission_denied(self):
         func = decorators.user_passes_test(
             lambda u: u.pk == self.user.pk + 1,
-        )(lambda info: None)
+        )(lambda src, info: None)
 
         with self.assertRaises(exceptions.PermissionDenied):
-            func(self.info(self.user))
+            func(None, info=self.info(self.user))
 
 
 class LoginRequiredTests(TestCase):
 
     def test_login_required(self):
         result = decorators.login_required(
-            lambda info: None,
-        )(self.info(self.user))
+            lambda src, info: None,
+        )(None, info=self.info(self.user))
+
+        self.assertIsNone(result)
+
+    def test_login_required_no_info(self):
+        result = decorators.login_required(
+            lambda src: None,
+        )(None, info=self.info(self.user))
 
         self.assertIsNone(result)
 
     def test_permission_denied(self):
-        func = decorators.login_required(lambda info: None)
+        func = decorators.login_required(lambda src, info: None)
 
         with self.assertRaises(exceptions.PermissionDenied):
-            func(self.info(AnonymousUser()))
+            func(None, info=self.info(AnonymousUser()))
 
 
 class StaffMemberRequiredTests(TestCase):
@@ -47,16 +54,16 @@ class StaffMemberRequiredTests(TestCase):
         self.user.is_staff = True
 
         result = decorators.staff_member_required(
-            lambda info: None,
-        )(self.info(self.user))
+            lambda src, info: None,
+        )(None, info=self.info(self.user))
 
         self.assertIsNone(result)
 
     def test_permission_denied(self):
-        func = decorators.staff_member_required(lambda info: None)
+        func = decorators.staff_member_required(lambda src, info: None)
 
         with self.assertRaises(exceptions.PermissionDenied):
-            func(self.info(self.user))
+            func(None, info=self.info(self.user))
 
 
 class SuperuserRequiredTests(TestCase):
@@ -65,16 +72,16 @@ class SuperuserRequiredTests(TestCase):
         self.user.is_superuser = True
 
         result = decorators.superuser_required(
-            lambda info: None,
-        )(self.info(self.user))
+            lambda src, info: None,
+        )(None, info=self.info(self.user))
 
         self.assertIsNone(result)
 
     def test_permission_denied(self):
-        func = decorators.superuser_required(lambda info: None)
+        func = decorators.superuser_required(lambda src, info: None)
 
         with self.assertRaises(exceptions.PermissionDenied):
-            func(self.info(self.user))
+            func(None, info=self.info(self.user))
 
 
 class PermissionRequiredTests(TestCase):
@@ -84,18 +91,18 @@ class PermissionRequiredTests(TestCase):
         self.user.user_permissions.add(perm)
 
         result = decorators.permission_required('auth.add_user')(
-            lambda info: None,
-        )(self.info(self.user))
+            lambda src, info: None,
+        )(None, info=self.info(self.user))
 
         self.assertIsNone(result)
 
     def test_permission_denied(self):
         func = decorators.permission_required(
             ['auth.add_user', 'auth.change_user'],
-        )(lambda info: None)
+        )(lambda src, info: None)
 
         with self.assertRaises(exceptions.PermissionDenied):
-            func(self.info(self.user))
+            func(None, info=self.info(self.user))
 
 
 class CSRFRotationTests(TestCase):

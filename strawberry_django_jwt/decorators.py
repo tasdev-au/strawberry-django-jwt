@@ -3,19 +3,18 @@ from calendar import timegm
 from datetime import datetime
 from functools import wraps
 
+import strawberry
 from django.contrib.auth import authenticate
 from django.contrib.auth import get_user_model
 from django.middleware.csrf import rotate_token
 from django.utils.translation import gettext as _
-from graphql.execution.execute import GraphQLResolveInfo
-from strawberry.django.context import StrawberryDjangoContext
 
 from . import exceptions
 from . import signals
 from .refresh_token.shortcuts import create_refresh_token
 from .refresh_token.shortcuts import refresh_token_lazy
 from .settings import jwt_settings
-from .utils import delete_cookie
+from .utils import delete_cookie, get_context
 from .utils import maybe_thenable
 from .utils import set_cookie
 
@@ -31,18 +30,17 @@ __all__ = [
     'setup_jwt_cookie',
     'jwt_cookie',
     'ensure_token',
-    'dispose_extra_kwargs'
+    'dispose_extra_kwargs',
+    'login_field'
 ]
 
 
 def context(f):
     def decorator(func):
         def wrapper(*args, **kwargs):
-            info = next(
-                arg for arg in args
-                if isinstance(arg, GraphQLResolveInfo)
-            )
-            return func(info.context, *args, **kwargs)
+            info = kwargs.get("info")
+            ctx = get_context(info)
+            return func(ctx, *args, **kwargs)
 
         return wrapper
 
@@ -54,8 +52,8 @@ def user_passes_test(test_func, exc=exceptions.PermissionDenied):
         @wraps(f)
         @context(f)
         def wrapper(context, *args, **kwargs):
-            if test_func(context.user):
-                return f(*args, **kwargs)
+            if context and test_func(context.user):
+                return dispose_extra_kwargs(f)(*args, **kwargs)
             raise exc
 
         return wrapper
@@ -66,6 +64,10 @@ def user_passes_test(test_func, exc=exceptions.PermissionDenied):
 login_required = user_passes_test(lambda u: u.is_authenticated)
 staff_member_required = user_passes_test(lambda u: u.is_staff)
 superuser_required = user_passes_test(lambda u: u.is_superuser)
+
+
+def login_field(fn=None):
+    return strawberry.field(login_required(fn))
 
 
 def permission_required(perm):
@@ -80,17 +82,15 @@ def permission_required(perm):
 
 
 def on_token_auth_resolve(values):
-    context, user, payload = values
-    payload.payload = jwt_settings.JWT_PAYLOAD_HANDLER(user, context)
-    payload.token = jwt_settings.JWT_ENCODE_HANDLER(payload.payload, context)
+    info, user, payload = values
+    ctx = get_context(info)
+    payload.payload = jwt_settings.JWT_PAYLOAD_HANDLER(user, ctx)
+    payload.token = jwt_settings.JWT_ENCODE_HANDLER(payload.payload, ctx)
 
     if jwt_settings.JWT_LONG_RUNNING_REFRESH_TOKEN:
-        req = context.request \
-            if isinstance(context, StrawberryDjangoContext) \
-            else context
-        if getattr(req, 'jwt_cookie', False):
-            req.jwt_refresh_token = create_refresh_token(user)
-            payload.refresh_token = req.jwt_refresh_token.get_token()
+        if getattr(ctx, 'jwt_cookie', False):
+            ctx.jwt_refresh_token = create_refresh_token(user)
+            payload.refresh_token = ctx.jwt_refresh_token.get_token()
         else:
             payload.refresh_token = refresh_token_lazy(user)
 
@@ -122,7 +122,7 @@ def token_auth(f):
 
         result = f(cls, info, **kwargs)
         signals.token_issued.send(sender=cls, request=context, user=user)
-        return maybe_thenable((context, user, result), on_token_auth_resolve)
+        return maybe_thenable((info, user, result), on_token_auth_resolve)
 
     return wrapper
 
@@ -159,13 +159,18 @@ def setup_jwt_cookie(f):
     @wraps(f)
     def wrapper(cls, info, *args, **kwargs):
         result = f(cls, info, **kwargs)
-        request = info.context.request if isinstance(
-            info.context, StrawberryDjangoContext) else info.context
-        if getattr(request, 'jwt_cookie', False):
-            request.jwt_token = result.token
+        ctx = get_context(info)
+        if getattr(ctx, 'jwt_cookie', False):
+            ctx.jwt_token = result.token
         return result
 
     return wrapper
+
+
+def apply_status(view_func):
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        response = view_func(request, *args, **kwargs)
 
 
 def jwt_cookie(view_func):
@@ -210,9 +215,7 @@ def ensure_token(f):
     @wraps(f)
     def wrapper(cls, info, token=None, *args, **kwargs):
         if token is None:
-            cookies = info.context.request.COOKIES \
-                if isinstance(info.context, StrawberryDjangoContext) \
-                else info.context.COOKIES
+            cookies = get_context(info).COOKIES
             token = cookies.get(jwt_settings.JWT_COOKIE_NAME)
 
             if token is None:
@@ -233,5 +236,16 @@ def dispose_extra_kwargs(fn):
                 self[key] = val
         passed_kwargs = {k: v for k, v in kwargs_.items() if k in present}
         return fn(self, *args_, **passed_kwargs)
+
+    return wrapper
+
+
+def pass_info(f):
+    @wraps(f)
+    def wrapper(self, *args_, **kwargs_):
+        info = kwargs_.pop("info", None)
+        if info is None and len(args_) > 0:
+            info = args_[0]
+        return f(self, info, *args_, **kwargs_)
 
     return wrapper

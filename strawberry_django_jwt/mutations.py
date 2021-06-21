@@ -1,11 +1,8 @@
 import inspect
-from functools import wraps
-from typing import Optional
 
 import strawberry
 from django.contrib.auth import get_user_model
 from strawberry.arguments import StrawberryArgument
-from strawberry.django.context import StrawberryDjangoContext
 from strawberry.field import StrawberryField
 
 from . import mixins
@@ -32,7 +29,7 @@ __all__ = [
 
 from .settings import jwt_settings
 
-from .utils import get_payload
+from .utils import get_payload, get_context
 
 
 class JSONWebTokenMutation(mixins.OptionalJSONWebTokenMixin):
@@ -71,8 +68,7 @@ class Refresh(mixins.RefreshMixin):
 class DeleteJSONWebTokenCookie(RequestInfoMixin):
     @strawberry.mutation
     def delete_cookie(self, info) -> DeleteType:
-        request = info.context.request if isinstance(
-            info.context, StrawberryDjangoContext) else info.context
-        request.delete_jwt_cookie = (jwt_settings.JWT_COOKIE_NAME in request.COOKIES and
-                                     getattr(request, 'jwt_cookie', False))
-        return DeleteType(deleted=request.delete_jwt_cookie)
+        ctx = get_context(info)
+        ctx.delete_jwt_cookie = (jwt_settings.JWT_COOKIE_NAME in ctx.COOKIES and
+                                 getattr(ctx, 'jwt_cookie', False))
+        return DeleteType(deleted=ctx.delete_jwt_cookie)

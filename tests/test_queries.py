@@ -1,13 +1,14 @@
 import strawberry
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
-from strawberry_django_jwt.decorators import dispose_extra_kwargs
+from strawberry.types import Info
+
+from strawberry_django_jwt.decorators import dispose_extra_kwargs, login_required
 from strawberry_django_jwt.mixins import OptionalJSONWebTokenMixin
 from strawberry_django_jwt.mixins import RequestInfoMixin
 from strawberry_django_jwt.model_object_types import UserType
 from strawberry_django_jwt.settings import jwt_settings
 from strawberry_django_jwt.shortcuts import get_token
-
 from .decorators import OverrideJwtSettings
 from .testcases import SchemaTestCase
 
@@ -26,6 +27,39 @@ class QueriesTests(SchemaTestCase):
 
         self.other_user = get_user_model().objects.create_user('other')
         self.other_token = get_token(self.other_user)
+
+    def test_login_required(self):
+        @strawberry.type
+        class Query(RequestInfoMixin, OptionalJSONWebTokenMixin):
+            @strawberry.field
+            @login_required
+            def test(self) -> str:
+                return "TEST"
+
+            @strawberry.field
+            @login_required
+            def test_info(self, info: Info) -> str:
+                return "TEST-INFO"
+
+        self.client.schema(query=Query, mutation=self.Mutation)
+
+        query = """
+        query Test {
+            test
+            testInfo
+        }
+        """
+
+        headers = {
+            jwt_settings.JWT_AUTH_HEADER_NAME:
+                f'{jwt_settings.JWT_AUTH_HEADER_PREFIX} {self.token}',
+        }
+
+        response = self.client.execute(query, **headers)
+        data = response.data
+
+        self.assertEqual(data['test'], "TEST")
+        self.assertIsNone(response.errors)
 
     @OverrideJwtSettings(JWT_ALLOW_ARGUMENT=True)
     def test_multiple_credentials(self):
@@ -89,7 +123,7 @@ class QueriesTests(SchemaTestCase):
     @OverrideJwtSettings(
         JWT_ALLOW_ARGUMENT=True,
         JWT_ALLOW_ANY_CLASSES=[
-            'graphql.type.definition.GraphQLObjectType',
+            'graphql.type.definition.GraphQLType',
         ])
     def test_allow_any(self):
         query = f'''
