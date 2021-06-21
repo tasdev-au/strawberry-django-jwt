@@ -1,15 +1,11 @@
-import functools
-import inspect
 from calendar import timegm
 from datetime import datetime
 from inspect import isawaitable
 from typing import Any
-from typing import List
-from typing import Optional
 from typing import Union
 
-import django
 import jwt
+from asgiref.sync import sync_to_async
 from django.contrib.auth import get_user_model
 from django.http import HttpRequest
 from django.utils.translation import gettext as _
@@ -18,13 +14,6 @@ from strawberry.django.context import StrawberryDjangoContext
 from . import exceptions
 from . import object_types
 from .settings import jwt_settings
-
-
-def strip_kwargs(fn, strip: List[str]):
-    def decorate(*args, **kwargs):
-        return fn(args, **{k: v for k, v in kwargs.items() if k not in strip})
-
-    return decorate
 
 
 def jwt_payload(user, context=None):
@@ -134,6 +123,14 @@ def get_user_by_natural_key(username):
         return None
 
 
+async def get_user_by_natural_key_async(username):
+    user_model = get_user_model()
+    try:
+        return await sync_to_async(user_model._default_manager.get_by_natural_key)(username)
+    except user_model.DoesNotExist:
+        return None
+
+
 def get_user_by_payload(payload):
     username = jwt_settings.JWT_PAYLOAD_GET_USERNAME_HANDLER(payload)
 
@@ -141,6 +138,19 @@ def get_user_by_payload(payload):
         raise exceptions.JSONWebTokenError(_('Invalid payload'))
 
     user = jwt_settings.JWT_GET_USER_BY_NATURAL_KEY_HANDLER(username)
+
+    if user is not None and not getattr(user, 'is_active', True):
+        raise exceptions.JSONWebTokenError(_('User is disabled'))
+    return user
+
+
+async def get_user_by_payload_async(payload):
+    username = jwt_settings.JWT_PAYLOAD_GET_USERNAME_HANDLER(payload)
+
+    if not username:
+        raise exceptions.JSONWebTokenError(_('Invalid payload'))
+
+    user = await jwt_settings.JWT_ASYNC_GET_USER_BY_NATURAL_KEY_HANDLER(username)
 
     if user is not None and not getattr(user, 'is_active', True):
         raise exceptions.JSONWebTokenError(_('User is disabled'))
@@ -159,10 +169,8 @@ def set_cookie(response, key, value, expires):
         'secure': jwt_settings.JWT_COOKIE_SECURE,
         'path': jwt_settings.JWT_COOKIE_PATH,
         'domain': jwt_settings.JWT_COOKIE_DOMAIN,
+        'samesite': jwt_settings.JWT_COOKIE_SAMESITE,
     }
-    if django.VERSION >= (2, 1):
-        kwargs['samesite'] = jwt_settings.JWT_COOKIE_SAMESITE
-
     response.set_cookie(key, value, **kwargs)
 
 
@@ -205,25 +213,3 @@ def get_context(info: Any) -> Union[HttpRequest, HttpRequest]:
     if isinstance(ctx, StrawberryDjangoContext):
         return ctx.request
     return ctx
-
-
-def get_class_that_defined_method(meth):
-    if isinstance(meth, functools.partial):
-        return get_class_that_defined_method(meth.func)
-    if inspect.ismethod(meth) or (
-            inspect.isbuiltin(meth)
-            and getattr(meth, '__self__', None) is not None and getattr(meth.__self__, '__class__', None)):
-        for cls in inspect.getmro(meth.__self__.__class__):
-            if meth.__name__ in cls.__dict__:
-                return cls
-        # fallback to __qualname__ parsing
-        meth = getattr(meth, '__func__', meth)
-    if inspect.isfunction(meth):
-        cls = getattr(inspect.getmodule(meth),
-                      meth.__qualname__.split('.<locals>', 1)[
-                          0].rsplit('.', 1)[0],
-                      None)
-        if isinstance(cls, type):
-            return cls
-    # handle special descriptor objects
-    return getattr(meth, '__objclass__', None)

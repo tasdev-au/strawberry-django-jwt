@@ -34,15 +34,18 @@ substitutes [Graphene](https://graphene-python.org/) GraphQL backend for [Strawb
    ]
    ```
 
-3. Add `JSONWebTokenMiddleware` middleware to your **STRAWBERRY** schema definition:
+3. Add `JSONWebTokenMiddleware` or `AsyncJSONWebTokenMiddleware` middleware to your **STRAWBERRY** schema definition:
 
    ```python
-   from strawberry_django_jwt.middleware import JSONWebTokenMiddleware
+   from strawberry_django_jwt.middleware import JSONWebTokenMiddleware, AsyncJSONWebTokenMiddleware
    from strawberry import Schema
 
    schema = Schema(...)
    schema.middleware.extend([
+        # !! IMPORTANT !!
+        # Pick only one, async middleware is needed when using AsyncGraphQLSchema
         JSONWebTokenMiddleware(),
+        AsyncJSONWebTokenMiddleware(),
    ])
    ```
 
@@ -82,7 +85,7 @@ substitutes [Graphene](https://graphene-python.org/) GraphQL backend for [Strawb
    from strawberry_django_jwt.views import StatusHandlingGraphQLView as GQLView
    from ... import schema
 
-   urlpatterns = \
+   urlpatterns += \
     [
         re_path(r'^graphql/?$', jwt_cookie(GQLView.as_view(schema=schema))),
     ]
@@ -96,7 +99,7 @@ substitutes [Graphene](https://graphene-python.org/) GraphQL backend for [Strawb
    from strawberry_django_jwt.views import AsyncStatusHandlingGraphQLView as AGQLView
    from ... import schema
 
-   urlpatterns = \
+   urlpatterns += \
     [
         re_path(r'^graphql/?$', jwt_cookie(AGQLView.as_view(schema=schema))),
     ]
@@ -141,6 +144,9 @@ class Query:
 ```
 
 Please note the info argument, without which strawberry would not provide the context info required for authentication.
+
+### Mixin info injection
+
 An alternative approach to this problem is following:
 
 ```python
@@ -174,3 +180,20 @@ class Query(RequestInfoMixin):
 
 All function arguments that are not present in the definition will be added by the `login_required` decorator to
 the `self` dictionary as kwargs.
+
+### Async views
+
+Should be fully supported :)
+
+```python
+import strawberry
+from strawberry_django_jwt.decorators import login_field
+from strawberry_django_jwt.mixins import RequestInfoMixin
+
+
+@strawberry.type
+class Query(RequestInfoMixin):
+    @login_field
+    async def foo(self) -> str:
+        return "bar"
+```

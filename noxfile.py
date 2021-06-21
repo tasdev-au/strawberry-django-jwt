@@ -3,7 +3,6 @@ from pathlib import Path
 from textwrap import dedent
 
 import nox
-from nox import parametrize
 from nox import Session
 from nox import session
 
@@ -135,7 +134,7 @@ def coverage(session_: Session) -> None:
     # Do not use session.posargs unless this is the only session.
     nsessions = len(session_._runner.manifest)
     has_args = session_.posargs and nsessions == 1
-    args = session_.posargs if has_args else ["report"]
+    args = session_.posargs if has_args else ["report", "-i"]
 
     session_.install("coverage[toml]")
 

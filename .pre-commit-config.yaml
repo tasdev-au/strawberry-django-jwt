@@ -21,12 +21,6 @@ repos:
         language: system
         types: [text]
         stages: [commit, push, manual]
-      - id: autopep8
-        name: autopep8
-        entry: autopep8 --in-place
-        language: system
-        types: [python]
-        require_serial: true
       - id: reorder-python-imports
         name: Reorder python imports
         entry: reorder-python-imports

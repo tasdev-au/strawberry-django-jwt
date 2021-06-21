@@ -3,10 +3,12 @@ from .refresh_token.shortcuts import get_refresh_token
 from .settings import jwt_settings
 from .utils import get_payload
 from .utils import get_user_by_payload
+from .utils import get_user_by_payload_async
 
 __all__ = [
     'get_token',
     'get_user_by_token',
+    'get_user_by_token_async',
     'get_refresh_token',
     'create_refresh_token',
 ]
@@ -22,3 +24,8 @@ def get_token(user, context=None, **extra):
 def get_user_by_token(token, context=None):
     payload = get_payload(token, context)
     return get_user_by_payload(payload)
+
+
+async def get_user_by_token_async(token, context=None):
+    payload = get_payload(token, context)
+    return await get_user_by_payload_async(payload)

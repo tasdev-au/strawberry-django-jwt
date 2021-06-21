@@ -34,9 +34,6 @@ class BaseStatusHandlingGraphQLView(BaseView):
         for name, value in sub_response.items():
             response[name] = value
 
-        if sub_response.status_code is not None:
-            response.status_code = sub_response.status_code
-
         for name, value in sub_response.cookies.items():
             response.cookies[name] = value
 
