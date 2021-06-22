@@ -144,7 +144,10 @@ if django.VERSION[:2] >= (3, 1):
                     f'{jwt_settings.JWT_AUTH_HEADER_PREFIX} {self.token}',
             }
 
-            response = await self.client.execute(query, custom_headers=headers)
+            if django.VERSION[:2] == (3, 1):
+                response = await self.client.execute(query, custom_headers=headers)
+            else:
+                response = await self.client.execute(query, **headers)
             data = response.data
 
             self.assertEqual(data['test'], "TEST")

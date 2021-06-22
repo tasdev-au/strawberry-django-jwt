@@ -102,7 +102,7 @@ if django.VERSION[:2] >= (3, 1):
         def request(self, **request):
             if request.get("custom_headers"):
                 request["headers"].extend(
-                    [(bytes(h, "latin1"), bytes(v, "latin1"))
+                    [(h.lower().encode("ascii"), v.encode("latin1"))
                      for h, v in request.get("custom_headers").items()])
             for idx, header in enumerate(request["headers"]):
                 if header[0] == b"content-length":

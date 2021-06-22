@@ -5,7 +5,6 @@ import django
 from django.http import HttpRequest
 from django.http import HttpResponse
 from django.http import JsonResponse
-from starlette import status
 from strawberry.django.views import BaseView
 from strawberry.django.views import GraphQLView
 from strawberry.http import GraphQLHTTPResponse
@@ -47,7 +46,7 @@ class StatusHandlingGraphQLView(BaseStatusHandlingGraphQLView, GraphQLView):
         res = make_status_response(process_result(result))
         if result.errors:
             if any(isinstance(err, JSONWebTokenError) for err in [e.original_error for e in result.errors]):
-                res["status"] = status.HTTP_401_UNAUTHORIZED
+                res["status"] = 401
         return res
 
 
@@ -63,5 +62,5 @@ if django.VERSION[:2] >= (3, 1):
             res = make_status_response(process_result(result))
             if result.errors:
                 if any(isinstance(err, JSONWebTokenError) for err in [e.original_error for e in result.errors]):
-                    res["status"] = status.HTTP_401_UNAUTHORIZED
+                    res["status"] = 401
             return res
