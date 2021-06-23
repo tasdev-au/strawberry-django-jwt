@@ -36,6 +36,17 @@ __all__ = [
 ]
 
 
+def login_required(target):
+    get_result = next((name
+                       for (name, _)
+                       in inspect.getmembers(target, inspect.ismethod)
+                       if name == "get_result"), None)
+    if get_result is not None:
+        target.get_result = login_required(target.get_result)
+        return target
+    return user_passes_test(lambda u: u.is_authenticated)(target)
+
+
 def context(f):
     def decorator(func):
         def wrapper(*args, **kwargs):
@@ -62,7 +73,6 @@ def user_passes_test(test_func, exc=exceptions.PermissionDenied):
     return decorator
 
 
-login_required = user_passes_test(lambda u: u.is_authenticated)
 staff_member_required = user_passes_test(lambda u: u.is_staff)
 superuser_required = user_passes_test(lambda u: u.is_superuser)
 
@@ -133,8 +143,8 @@ def refresh_expiration(f):
     def wrapper(cls, *args, **kwargs):
         def on_resolve(payload):
             payload.refresh_expires_in = (
-                timegm(datetime.utcnow().utctimetuple()) +
-                jwt_settings.JWT_REFRESH_EXPIRATION_DELTA.total_seconds()
+                    timegm(datetime.utcnow().utctimetuple()) +
+                    jwt_settings.JWT_REFRESH_EXPIRATION_DELTA.total_seconds()
             )
             return payload
 
@@ -192,7 +202,7 @@ def jwt_cookie(view_func):
             if hasattr(request, 'jwt_refresh_token'):
                 refresh_token = request.jwt_refresh_token
                 expires = refresh_token.created + \
-                    jwt_settings.JWT_REFRESH_EXPIRATION_DELTA
+                          jwt_settings.JWT_REFRESH_EXPIRATION_DELTA
 
                 set_cookie(
                     response,
@@ -228,15 +238,18 @@ def ensure_token(f):
 
 def dispose_extra_kwargs(fn):
     @wraps(fn)
-    def wrapper(self, *args_, **kwargs_):
-        if not isinstance(self, dict):
-            self = {}
+    def wrapper(src, *args_, **kwargs_):
+        root = {}
+        if src:
+            args_ = args_[1:]
         present = inspect.signature(fn).parameters.keys()
         for key, val in kwargs_.items():
             if key not in present:
-                self[key] = val
+                root[key] = val
         passed_kwargs = {k: v for k, v in kwargs_.items() if k in present}
-        return fn(self, *args_, **passed_kwargs)
+        if src:
+            return fn(src, root, *args_, **passed_kwargs)
+        return fn(root, *args_, **passed_kwargs)
 
     return wrapper
 

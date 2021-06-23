@@ -1,6 +1,7 @@
 from typing import *
 
 from strawberry.field import StrawberryField
+from strawberry_django_jwt.decorators import login_required
 
 
 class ExtendedStrawberryField(StrawberryField):

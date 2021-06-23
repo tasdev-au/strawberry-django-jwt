@@ -184,6 +184,24 @@ class Query(RequestInfoMixin):
 All function arguments that are not present in the definition will be added by the `login_required` decorator to
 the `self` dictionary as kwargs.
 
+### Model mutations
+
+You can add the login_required decorator to them as well
+
+```python
+import strawberry
+from strawberry_django_jwt.decorators import login_required
+from strawberry_django_jwt.mixins import RequestInfoMixin
+from strawberry.django import mutations
+
+
+@strawberry.type
+class Mutation(RequestInfoMixin):
+    foo_create: FooType = login_required(mutations.create(FooInput))
+    foo_delete: FooType = login_required(mutations.update(FooPartialInput))
+    foo_update: FooType = login_required(mutations.delete())
+```
+
 ### Async views
 
 Should be fully supported :)
