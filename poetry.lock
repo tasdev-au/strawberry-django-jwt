@@ -411,14 +411,13 @@ category = "main"
 description = "JSON Web Token implementation in Python"
 name = "pyjwt"
 optional = false
-python-versions = ">=3.6"
-version = "2.1.0"
+python-versions = "*"
+version = "1.7.1"
 
 [package.extras]
-crypto = ["cryptography (>=3.3.1,<4.0.0)"]
-dev = ["sphinx", "sphinx-rtd-theme", "zope.interface", "cryptography (>=3.3.1,<4.0.0)", "pytest (>=6.0.0,<7.0.0)", "coverage (5.0.4)", "mypy", "pre-commit"]
-docs = ["sphinx", "sphinx-rtd-theme", "zope.interface"]
-tests = ["pytest (>=6.0.0,<7.0.0)", "coverage (5.0.4)"]
+crypto = ["cryptography (>=1.4)"]
+flake8 = ["flake8", "flake8-import-order", "pep8-naming"]
+test = ["pytest (>=4.0.1,<5.0.0)", "pytest-cov (>=2.6.0,<3.0.0)", "pytest-runner (>=4.2,<5.0.0)"]
 
 [[package]]
 category = "dev"
@@ -532,11 +531,22 @@ version = "0.4.1"
 
 [[package]]
 category = "main"
+description = "The little ASGI library that shines."
+name = "starlette"
+optional = false
+python-versions = ">=3.6"
+version = "0.14.2"
+
+[package.extras]
+full = ["aiofiles", "graphene", "itsdangerous", "jinja2", "python-multipart", "pyyaml", "requests"]
+
+[[package]]
+category = "main"
 description = "A library for creating GraphQL APIs"
 name = "strawberry-graphql"
 optional = false
 python-versions = ">=3.7,<4.0"
-version = "0.67.1"
+version = "0.64.5"
 
 [package.dependencies]
 cached-property = ">=1.5.2,<2.0.0"
@@ -546,11 +556,12 @@ hupper = ">=1.5,<2.0"
 pygments = ">=2.3,<3.0"
 python-dateutil = ">=2.7.0,<3.0.0"
 python-multipart = ">=0.0.5,<0.0.6"
+starlette = ">=0.13.6,<0.15.0"
 typing_extensions = ">=3.7.4,<4.0.0"
 
 [package.extras]
 aiohttp = ["aiohttp (>=3.7.4.post0,<4.0.0)"]
-debug-server = ["starlette (>=0.13.6,<0.15.0)", "uvicorn (>=0.11.6,<0.14.0)"]
+debug-server = ["uvicorn (>=0.11.6,<0.14.0)"]
 django = ["django (>=2,<4)", "asgiref (>=3.2,<4.0)"]
 flask = ["flask (>=1.1,<2.0)"]
 opentelemetry = ["opentelemetry-api (>=0.17b0,<0.18)", "opentelemetry-sdk (>=0.17b0,<0.18)"]
@@ -604,7 +615,7 @@ description = "Typing stubs for enum34"
 name = "types-enum34"
 optional = false
 python-versions = "*"
-version = "0.1.7"
+version = "0.1.8"
 
 [[package]]
 category = "dev"
@@ -612,12 +623,31 @@ description = "Typing stubs for ipaddress"
 name = "types-ipaddress"
 optional = false
 python-versions = "*"
-version = "0.1.4"
+version = "0.1.5"
+
+[[package]]
+category = "dev"
+description = "Typing stubs for jwt"
+name = "types-jwt"
+optional = false
+python-versions = "*"
+version = "0.1.3"
+
+[package.dependencies]
+types-cryptography = "*"
 
 [[package]]
 category = "dev"
 description = "Typing stubs for mock"
 name = "types-mock"
+optional = false
+python-versions = "*"
+version = "0.1.3"
+
+[[package]]
+category = "dev"
+description = "Typing stubs for pkg_resources"
+name = "types-pkg-resources"
 optional = false
 python-versions = "*"
 version = "0.1.3"
@@ -666,7 +696,7 @@ docs = ["sphinx", "jaraco.packaging (>=8.2)", "rst.linker (>=1.9)"]
 testing = ["pytest (>=4.6)", "pytest-checkdocs (>=1.2.3)", "pytest-flake8", "pytest-cov", "pytest-enabler", "jaraco.itertools", "func-timeout", "pytest-black (>=0.3.7)", "pytest-mypy"]
 
 [metadata]
-content-hash = "0968b62d1f7e66797507fc18382445e1be0dd640ba981ea293fdb16e77f09e60"
+content-hash = "b56af27f56f634b06f389752e7761bdbb2f1b23940165bf831670b512b62506c"
 lock-version = "1.0"
 python-versions = "^3.7"
 
@@ -923,8 +953,8 @@ pygments = [
     {file = "Pygments-2.9.0.tar.gz", hash = "sha256:a18f47b506a429f6f4b9df81bb02beab9ca21d0a5fee38ed15aef65f0545519f"},
 ]
 pyjwt = [
-    {file = "PyJWT-2.1.0-py3-none-any.whl", hash = "sha256:934d73fbba91b0483d3857d1aff50e96b2a892384ee2c17417ed3203f173fca1"},
-    {file = "PyJWT-2.1.0.tar.gz", hash = "sha256:fba44e7898bbca160a2b2b501f492824fc8382485d3a6f11ba5d0c1937ce6130"},
+    {file = "PyJWT-1.7.1-py2.py3-none-any.whl", hash = "sha256:5c6eca3c2940464d106b99ba83b00c6add741c9becaec087fb7ccdefea71350e"},
+    {file = "PyJWT-1.7.1.tar.gz", hash = "sha256:8d59a976fb773f3e6a39c85636357c4f0e242707394cadadd9814f5cbaa20e96"},
 ]
 pyparsing = [
     {file = "pyparsing-2.4.7-py2.py3-none-any.whl", hash = "sha256:ef9d7589ef3c200abe66653d3f1ab1033c3c419ae9b9bdb1240a85b024efc88b"},
@@ -961,9 +991,13 @@ sqlparse = [
     {file = "sqlparse-0.4.1-py3-none-any.whl", hash = "sha256:017cde379adbd6a1f15a61873f43e8274179378e95ef3fede90b5aa64d304ed0"},
     {file = "sqlparse-0.4.1.tar.gz", hash = "sha256:0f91fd2e829c44362cbcfab3e9ae12e22badaa8a29ad5ff599f9ec109f0454e8"},
 ]
+starlette = [
+    {file = "starlette-0.14.2-py3-none-any.whl", hash = "sha256:3c8e48e52736b3161e34c9f0e8153b4f32ec5d8995a3ee1d59410d92f75162ed"},
+    {file = "starlette-0.14.2.tar.gz", hash = "sha256:7d49f4a27f8742262ef1470608c59ddbc66baf37c148e938c7038e6bc7a998aa"},
+]
 strawberry-graphql = [
-    {file = "strawberry-graphql-0.67.1.tar.gz", hash = "sha256:bc284b7810c2af9caa726349305f117d53bf5855f0fddc3e6b8cb40345020cb6"},
-    {file = "strawberry_graphql-0.67.1-py3-none-any.whl", hash = "sha256:f2983c0874eac1d4981289fb3eda9e261ce11319c8318f293549ab8465e2729e"},
+    {file = "strawberry-graphql-0.64.5.tar.gz", hash = "sha256:56a4dbe6b4bf24fb5281848ad5454eaae6fc12fa681d3cca44b622f7f25dd2a6"},
+    {file = "strawberry_graphql-0.64.5-py3-none-any.whl", hash = "sha256:4bc346c38afa27660badfbfe1f8ec3e80c840e27faa6d42359891ebd5d908984"},
 ]
 strawberry-graphql-django = [
     {file = "strawberry-graphql-django-0.2.2.tar.gz", hash = "sha256:546c61a721588881e089c07384c016fc46d2cb2b9c9bee2fbd7baeed1289d8ca"},
@@ -1010,16 +1044,23 @@ types-cryptography = [
     {file = "types_cryptography-3.3.3-py2.py3-none-any.whl", hash = "sha256:524afedb2e7f3fa4b22bd164efb82809a75ff960cc5d40a2fa9b7c2cda228fab"},
 ]
 types-enum34 = [
-    {file = "types-enum34-0.1.7.tar.gz", hash = "sha256:009228c0feb8a72a78ae299a8683cdb766a4cfc2499730ec78f01885d6bc6dec"},
-    {file = "types_enum34-0.1.7-py3-none-any.whl", hash = "sha256:ae44abe68ec856565fc6eabe9f54e967c5d3eb406ba75448db0c41045918c8e7"},
+    {file = "types-enum34-0.1.8.tar.gz", hash = "sha256:9e91a94f1f42c73bd7aa43f19a157d722522d29097f301748a034e08693a423d"},
+    {file = "types_enum34-0.1.8-py3-none-any.whl", hash = "sha256:5833cfd003d7a860e8442d04a06aaa2bef1f050933f844fa7bd3634914e1aa7f"},
 ]
 types-ipaddress = [
-    {file = "types-ipaddress-0.1.4.tar.gz", hash = "sha256:a03f47c0f6c9ea49b95e2af8f47742f8bbca81c2373fc1ca41109cee4d0cb8c0"},
-    {file = "types_ipaddress-0.1.4-py3-none-any.whl", hash = "sha256:570406d4ea93c7523731145adc302d8d8167aedb2d33c3b7f4fbe6105ba3ec45"},
+    {file = "types-ipaddress-0.1.5.tar.gz", hash = "sha256:ffa2c4fe2e8f51898465e2142d4d325fbab009aaa7822db20a4e2e3a896560d7"},
+    {file = "types_ipaddress-0.1.5-py3-none-any.whl", hash = "sha256:137ab8a5a895a48157438c8f3eea738e2c22e82c1114ab20ffd78c8637bbc008"},
+]
+types-jwt = [
+    {file = "types_jwt-0.1.3-py2.py3-none-any.whl", hash = "sha256:36a1d5f99b349428f9ca5695e5caf3378398ae31d7aaed1c668c81451ba79b08"},
 ]
 types-mock = [
     {file = "types-mock-0.1.3.tar.gz", hash = "sha256:9bdafab236c0530fed36dbf18bc942633b2033bfda16551b2e4eb767341a8b8c"},
     {file = "types_mock-0.1.3-py2.py3-none-any.whl", hash = "sha256:e052879bb0a7d78547cce3342ffdf4ec3e8d2eff8f237911c3c8e31ac7ea8c86"},
+]
+types-pkg-resources = [
+    {file = "types-pkg_resources-0.1.3.tar.gz", hash = "sha256:834a9b8d3dbea343562fd99d5d3359a726f6bf9d3733bccd2b4f3096fbab9dae"},
+    {file = "types_pkg_resources-0.1.3-py2.py3-none-any.whl", hash = "sha256:0cb9972cee992249f93fff1a491bf2dc3ce674e5a1926e27d4f0866f7d9b6d9c"},
 ]
 typing-extensions = [
     {file = "typing_extensions-3.10.0.0-py2-none-any.whl", hash = "sha256:0ac0f89795dd19de6b97debb0c6af1c70987fd80a2d62d1958f7e56fcc31b497"},
