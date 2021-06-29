@@ -74,10 +74,9 @@ substitutes [Graphene](https://graphene-python.org/) GraphQL backend for [Strawb
        verify_token = jwt_mutations.Verify.verify
        refresh_token = jwt_mutations.Refresh.refresh
        delete_token_cookie = jwt_mutations.DeleteJSONWebTokenCookie.delete_cookie
-
+   ```
 
    schema = strawberry.Schema(mutation=Mutation, query=...)
-   ```
 
 6. \[OPTIONAL\] Set up the custom Strawberry views
 
@@ -90,9 +89,9 @@ substitutes [Graphene](https://graphene-python.org/) GraphQL backend for [Strawb
    from ... import schema
 
    urlpatterns += \
-    [
-        re_path(r'^graphql/?$', jwt_cookie(GQLView.as_view(schema=schema))),
-    ]
+   [
+       re_path(r'^graphql/?$', jwt_cookie(GQLView.as_view(schema=schema))),
+   ]
    ```
 
    or, for async views:
@@ -104,12 +103,22 @@ substitutes [Graphene](https://graphene-python.org/) GraphQL backend for [Strawb
    from ... import schema
 
    urlpatterns += \
-    [
-        re_path(r'^graphql/?$', jwt_cookie(AGQLView.as_view(schema=schema))),
-    ]
+   [
+       re_path(r'^graphql/?$', jwt_cookie(AGQLView.as_view(schema=schema))),
+   ]
    ```
 
 ---
+
+## Known Issues
+
+- `JWT_ALLOW_ANY_CLASSES`
+
+  - Only supports return-type based filtering at the moment, because strawberry does not use class-based field
+    definitions (so all superclasses are dropped)
+
+  - It might be possible to create a workaround by using either a class decorator or by creating a custom graphql
+    scheme that somehow preserves class hierarchy of types
 
 ## Quickstart Documentation
 
@@ -120,7 +129,7 @@ Relay support has been temporarily removed due to lack of experience with Relay
 Most of the features are conceptually the same as those provided
 by [Django GraphQL JWT](https://github.com/flavors/django-graphql-jwt)
 
-### Authenticating fields
+### Authenticating Fields
 
 Fields can be set to auth-only using the `login_required` decorator in combination with `strawberry.field` or
 via `login_field`
@@ -149,7 +158,7 @@ class Query:
 
 Please note the info argument, without which strawberry would not provide the context info required for authentication.
 
-### Mixin info injection
+### Mixin Info Injection
 
 An alternative approach to this problem is following:
 
@@ -185,7 +194,7 @@ class Query(RequestInfoMixin):
 All function arguments that are not present in the definition will be added by the `login_required` decorator to
 the `self` dictionary as kwargs.
 
-### Model mutations
+### Model Mutations
 
 You can add the login_required decorator to them as well
 
@@ -203,7 +212,7 @@ class Mutation(RequestInfoMixin):
     foo_update: FooType = login_required(mutations.delete())
 ```
 
-### Async views
+### Async Views
 
 Should be fully supported :)
 

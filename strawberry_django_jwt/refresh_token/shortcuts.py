@@ -1,9 +1,10 @@
+from asgiref.sync import sync_to_async
 from django.utils.functional import lazy
 from django.utils.translation import gettext as _
 
+from .utils import get_refresh_token_model
 from ..exceptions import JSONWebTokenError
 from ..settings import jwt_settings
-from .utils import get_refresh_token_model
 
 
 def get_refresh_token(token, context=None):
@@ -17,7 +18,7 @@ def get_refresh_token(token, context=None):
         )
 
     except refresh_token_model.DoesNotExist:
-        raise JSONWebTokenError(_('Invalid refresh token'))
+        raise JSONWebTokenError(_("Invalid refresh token"))
 
 
 def create_refresh_token(user, refresh_token=None):
@@ -28,7 +29,16 @@ def create_refresh_token(user, refresh_token=None):
 
 
 refresh_token_lazy = lazy(
-    lambda user, refresh_token=None:
-    create_refresh_token(user, refresh_token).get_token(),
+    lambda user, refresh_token=None: create_refresh_token(
+        user, refresh_token
+    ).get_token(),
     str,
 )
+
+
+async def create_token_lazy_async(user, refresh_token=None):
+    res = await sync_to_async(create_refresh_token)(user, refresh_token)
+    return res.get_token()
+
+
+refresh_token_lazy_async = create_token_lazy_async
