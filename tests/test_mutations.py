@@ -14,7 +14,7 @@ from strawberry.types import Info
 import strawberry_django_jwt.mutations
 from strawberry_django_jwt.decorators import login_field, dispose_extra_kwargs
 from strawberry_django_jwt.decorators import login_required
-from strawberry_django_jwt.mixins import JSONWebTokenMixin, RequestInfoMixin
+from strawberry_django_jwt.mixins import JSONWebTokenMixin
 from strawberry_django_jwt.settings import jwt_settings
 from strawberry_django_jwt.shortcuts import get_token
 from . import mixins
@@ -147,7 +147,7 @@ class CookieTokenAuthTests(mixins.CookieTokenAuthMixin, CookieTestCase):
 
     def test_extended_field(self):
         @strawberry.type
-        class Mutation(RequestInfoMixin):
+        class Mutation:
             y: str = strawberry.field()
 
         self.query = """
@@ -217,11 +217,7 @@ class LoginLogoutTest(SchemaTestCase):
     }"""
 
     @strawberry.type
-    class AAAAAAAAAAAAAAAAAAAAAAAA:
-        pass
-
-    @strawberry.type
-    class Mutation(AAAAAAAAAAAAAAAAAAAAAAAA):
+    class Mutation:
         token_auth = strawberry_django_jwt.mutations.ObtainJSONWebToken.obtain
         verify_token = strawberry_django_jwt.mutations.Verify.verify
 
