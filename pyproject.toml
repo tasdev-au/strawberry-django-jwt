@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "strawberry-django-jwt"
-version = "0.1.2-a1"
+version = "0.1.2"
 description = "Strawberry-graphql port of the graphene-django-jwt package"
 license = "MIT"
 authors = ["KundaPanda <vojdoh@gmail.com>"]
