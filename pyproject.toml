@@ -3,7 +3,7 @@ name = "strawberry-django-jwt"
 version = "0.1.4"
 description = "Strawberry-graphql port of the graphene-django-jwt package"
 license = "MIT"
-authors = ["KundaPanda <vojdoh@gmail.com>"]
+authors = ["Vojtěch Dohnal <vojdoh@gmail.com>"]
 maintainers = []
 readme = "README.md"
 classifiers = [
@@ -18,6 +18,7 @@ classifiers = [
     'Framework :: Django :: 3.2',
 ]
 exclude = ["tests/"]
+include = ["strawberry_django_jwt/"]
 
 [tool.poetry.dependencies]
 python = "^3.7"
