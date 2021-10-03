@@ -27,7 +27,7 @@ class SchemaRequestFactory(RequestFactory):
 
     def execute(self, query, **options):
         self._setup_middleware()
-        return self._schema.execute_sync(query, validate_queries=False, **options)
+        return self._schema.execute_sync(query, **options)
 
 
 class JSONWebTokenClient(SchemaRequestFactory, Client):
@@ -90,7 +90,7 @@ if django.VERSION[:2] >= (3, 1):
 
         def execute(self, query, **options):
             self._setup_middleware()
-            return self._schema.execute(query, validate_queries=False, **options)
+            return self._schema.execute(query, **options)
 
     class AsyncJSONWebTokenClient(AsyncSchemaRequestFactory, AsyncClient):
         def __init__(self, **defaults):

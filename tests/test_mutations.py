@@ -96,7 +96,11 @@ class RefreshTests(mixins.RefreshMixin, SchemaTestCase):
         token = get_token(self.user)
         response = self.client.execute(query, {"token": token})
 
-        self.assertEqual(response.data.get("test"), "{}")
+        self.assertEqual(len(response.errors), 1)
+        self.assertEqual(
+            response.errors[0].message,
+            "Unknown argument 'token' on field 'Mutation.test'.",
+        )
 
     @OverrideJwtSettings(JWT_HIDE_TOKEN_FIELDS=False)
     def test_visible_token_fields(self):
