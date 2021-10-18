@@ -3,3 +3,4 @@ exclude_paths:
   - "strawberry_django_jwt/refresh_token/migrations/*"
   - "strawberry_django_jwt/testcases.py"
   - "tests/*"
+  - "**/tests/**"
