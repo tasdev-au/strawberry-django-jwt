@@ -1,19 +1,23 @@
 from inspect import isawaitable
-from typing import Set, Any
+from typing import Any, Set, cast
 
 from django.contrib.auth import authenticate
 from django.contrib.auth.middleware import get_user
 from django.contrib.auth.models import AnonymousUser
-from graphql import GraphQLType
+from django.utils.translation import gettext as _
+from graphql import GraphQLResolveInfo, GraphQLType
 from strawberry.extensions import Extension
-from strawberry.types import ExecutionContext
+from strawberry.types import ExecutionContext, Info
 
-from .auth import authenticate as authenticate_async
-from .path import PathDict
-from .settings import jwt_settings
-from .utils import get_context
-from .utils import get_http_authorization
-from .utils import get_token_argument
+from strawberry_django_jwt import exceptions
+from strawberry_django_jwt.auth import authenticate as authenticate_async
+from strawberry_django_jwt.path import PathDict
+from strawberry_django_jwt.settings import jwt_settings
+from strawberry_django_jwt.utils import (
+    get_context,
+    get_http_authorization,
+    get_token_argument,
+)
 
 __all__ = [
     "allow_any",
@@ -61,9 +65,7 @@ class BaseJSONWebTokenMiddleware(Extension):
                 return True
         return False
 
-
-class JSONWebTokenMiddleware(BaseJSONWebTokenMiddleware):
-    def resolve(self, next_, root, info, **kwargs):
+    def resolve_base(self, info: Info, **kwargs):
         context = get_context(info)
         token_argument = get_token_argument(context, **kwargs)
 
@@ -79,6 +81,28 @@ class JSONWebTokenMiddleware(BaseJSONWebTokenMiddleware):
                     self.cached_authentication.insert(info.path, context.user)
                 else:
                     context.user = AnonymousUser()
+
+        if (
+            _authenticate(context) or token_argument is not None
+        ) and self.authenticate_context(info, **kwargs):
+            return context, token_argument
+        elif (
+            info.field_name == "__schema"
+            and cast(GraphQLResolveInfo, info).parent_type.name == "Query"
+            and jwt_settings.JWT_AUTHENTICATE_INTROSPECTION
+            and self.authenticate_context(info, **kwargs)
+        ):
+
+            raise exceptions.PermissionDenied(
+                _("The introspection query requires authentication.")
+            )
+
+        return context, token_argument
+
+
+class JSONWebTokenMiddleware(BaseJSONWebTokenMiddleware):
+    def resolve(self, _next, root, info: Info, *args, **kwargs):
+        context, token_argument = self.resolve_base(info, **kwargs)
 
         if (
             _authenticate(context) or token_argument is not None
@@ -92,26 +116,12 @@ class JSONWebTokenMiddleware(BaseJSONWebTokenMiddleware):
                 if jwt_settings.JWT_ALLOW_ARGUMENT:
                     self.cached_authentication.insert(info.path, user)
 
-        return next_(root, info, **kwargs)
+        return _next(root, info, **kwargs)
 
 
 class AsyncJSONWebTokenMiddleware(BaseJSONWebTokenMiddleware):
-    async def resolve(self, next_, root, info, **kwargs):
-        context = get_context(info)
-        token_argument = get_token_argument(context, **kwargs)
-
-        if jwt_settings.JWT_ALLOW_ARGUMENT and token_argument is None:
-            user = self.cached_authentication.parent(info.path)
-
-            if user is not None:
-                context.user = user
-
-            elif hasattr(context, "user"):
-                if hasattr(context, "session"):
-                    context.user = get_user(context)
-                    self.cached_authentication.insert(info.path, context.user)
-                else:
-                    context.user = AnonymousUser()
+    async def resolve(self, _next, root, info: Info, *args, **kwargs):
+        context, token_argument = self.resolve_base(info, **kwargs)
 
         if (
             _authenticate(context) or token_argument is not None
@@ -125,7 +135,7 @@ class AsyncJSONWebTokenMiddleware(BaseJSONWebTokenMiddleware):
                 if jwt_settings.JWT_ALLOW_ARGUMENT:
                     self.cached_authentication.insert(info.path, user)
 
-        result = next_(root, info, **kwargs)
+        result = _next(root, info, **kwargs)
         if isawaitable(result):
             return await result
         return result
