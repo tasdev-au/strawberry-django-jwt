@@ -219,3 +219,7 @@ class Query:
     async def foo(self) -> str:
         return "bar"
 ```
+
+### Other
+
+The introspection query authentication can be controlled by setting `JWT_AUTHENTICATE_INTROSPECTION`
