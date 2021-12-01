@@ -752,14 +752,14 @@ testing = ["pytest", "pytest-benchmark"]
 
 [[package]]
 name = "poetry"
-version = "1.1.11"
+version = "1.1.12"
 description = "Python dependency management and packaging made easy."
 category = "dev"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
 [package.dependencies]
-cachecontrol = {version = ">=0.12.4,<0.13.0", extras = ["filecache"]}
+cachecontrol = {version = ">=0.12.9,<0.13.0", extras = ["filecache"], markers = "python_version >= \"3.6\" and python_version < \"4.0\""}
 cachy = ">=0.3.0,<0.4.0"
 cleo = ">=0.8.1,<0.9.0"
 clikit = ">=0.6.2,<0.7.0"
@@ -790,7 +790,7 @@ importlib-metadata = {version = ">=1.7.0,<2.0.0", markers = "python_version >= \
 
 [[package]]
 name = "pre-commit"
-version = "2.15.0"
+version = "2.16.0"
 description = "A framework for managing and maintaining multi-language pre-commit hooks."
 category = "dev"
 optional = false
@@ -1120,7 +1120,7 @@ python-versions = ">=3.5"
 
 [[package]]
 name = "strawberry-graphql"
-version = "0.89.2"
+version = "0.90.2"
 description = "A library for creating GraphQL APIs"
 category = "main"
 optional = false
@@ -1265,7 +1265,7 @@ python-versions = "*"
 
 [[package]]
 name = "typing-extensions"
-version = "4.0.0"
+version = "4.0.1"
 description = "Backported and Experimental Type Hints for Python 3.6+"
 category = "main"
 optional = false
@@ -1343,7 +1343,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytes
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "67f7c9365f4da5fbc0c6586f98ae6269a8e6c4c56ecb32b0b4aae5fddbf5f429"
+content-hash = "400c92612f4c66781368d459e8c3c49b16df3cd79acd62b6cf7b6f7b5cb53d75"
 
 [metadata.files]
 argcomplete = [
@@ -1835,16 +1835,16 @@ pluggy = [
     {file = "pluggy-1.0.0.tar.gz", hash = "sha256:4224373bacce55f955a878bf9cfa763c1e360858e330072059e10bad68531159"},
 ]
 poetry = [
-    {file = "poetry-1.1.11-py2.py3-none-any.whl", hash = "sha256:628e2a933c9f7c28fa0edbee09f9e2e6b25301e610929b5414f3d55ed40fc712"},
-    {file = "poetry-1.1.11.tar.gz", hash = "sha256:7d7d22f55fbebb830cc85b1c69cd7a91fd85f49e5396e7a14b953645a470f69e"},
+    {file = "poetry-1.1.12-py2.py3-none-any.whl", hash = "sha256:3d4dc5d4c7171fb251b32e49a98cecbe2795d5e681ecee2297e2b2d2ccd671fc"},
+    {file = "poetry-1.1.12.tar.gz", hash = "sha256:5c66e2357fe37b552462a88b7d31bfa2ed8e84172208becd666933c776252567"},
 ]
 poetry-core = [
     {file = "poetry-core-1.0.7.tar.gz", hash = "sha256:98c11c755a16ef6c5673c22ca94a3802a7df4746a0853a70b6fae8b9f5cac206"},
     {file = "poetry_core-1.0.7-py2.py3-none-any.whl", hash = "sha256:4f8a7f5390d772f42c4c4c3f188e6424b802cb4b57466c6633a1b9ac36f18a43"},
 ]
 pre-commit = [
-    {file = "pre_commit-2.15.0-py2.py3-none-any.whl", hash = "sha256:a4ed01000afcb484d9eb8d504272e642c4c4099bbad3a6b27e519bd6a3e928a6"},
-    {file = "pre_commit-2.15.0.tar.gz", hash = "sha256:3c25add78dbdfb6a28a651780d5c311ac40dd17f160eb3954a0c59da40a505a7"},
+    {file = "pre_commit-2.16.0-py2.py3-none-any.whl", hash = "sha256:758d1dc9b62c2ed8881585c254976d66eae0889919ab9b859064fc2fe3c7743e"},
+    {file = "pre_commit-2.16.0.tar.gz", hash = "sha256:fe9897cac830aa7164dbd02a4e7b90cae49630451ce88464bca73db486ba9f65"},
 ]
 pre-commit-hooks = [
     {file = "pre_commit_hooks-4.0.1-py2.py3-none-any.whl", hash = "sha256:6efe92c7613c311abc7dd06817fc016f222d9289fe24b261e64412b0af96c662"},
@@ -2008,8 +2008,8 @@ sqlparse = [
     {file = "sqlparse-0.4.2.tar.gz", hash = "sha256:0c00730c74263a94e5a9919ade150dfc3b19c574389985446148402998287dae"},
 ]
 strawberry-graphql = [
-    {file = "strawberry-graphql-0.89.2.tar.gz", hash = "sha256:b7e2ad2ea6a1af234a2233518b03f3594bbaf80e1ad759853cf4c383d4ac86a6"},
-    {file = "strawberry_graphql-0.89.2-py3-none-any.whl", hash = "sha256:d8c379b2f2b306b1a10db3a669f3517e98c473cca9b0499e7350388b7a17aa22"},
+    {file = "strawberry-graphql-0.90.2.tar.gz", hash = "sha256:454263e4819a80a1a3df28c319d5dc8b41641724c2ab8ccba959082d47245eae"},
+    {file = "strawberry_graphql-0.90.2-py3-none-any.whl", hash = "sha256:708718d75e893b4eb998cccba1cf7ede629ab84c71edbcfdc597608c5604c7f4"},
 ]
 strawberry-graphql-django = [
     {file = "strawberry-graphql-django-0.2.5.tar.gz", hash = "sha256:483d97c24ce440a1e3cb92ec3e1fdc0cf534d9afa79600396b0a27a5d9d97793"},
@@ -2091,8 +2091,8 @@ types-pyyaml = [
     {file = "types_PyYAML-6.0.1-py3-none-any.whl", hash = "sha256:d5b318269652e809b5c30a5fe666c50159ab80bfd41cd6bafe655bf20b29fcba"},
 ]
 typing-extensions = [
-    {file = "typing_extensions-4.0.0-py3-none-any.whl", hash = "sha256:829704698b22e13ec9eaf959122315eabb370b0884400e9818334d8b677023d9"},
-    {file = "typing_extensions-4.0.0.tar.gz", hash = "sha256:2cdf80e4e04866a9b3689a51869016d36db0814d84b8d8a568d22781d45d27ed"},
+    {file = "typing_extensions-4.0.1-py3-none-any.whl", hash = "sha256:7f001e5ac290a0c0401508864c7ec868be4e701886d5b573a9528ed3973d9d3b"},
+    {file = "typing_extensions-4.0.1.tar.gz", hash = "sha256:4ca091dea149f945ec56afb48dae714f21e8692ef22a395223bcd328961b6a0e"},
 ]
 uritemplate = [
     {file = "uritemplate-4.1.1-py2.py3-none-any.whl", hash = "sha256:830c08b8d99bdd312ea4ead05994a38e8936266f84b9a7878232db50b044e02e"},
