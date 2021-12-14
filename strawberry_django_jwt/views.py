@@ -1,15 +1,10 @@
-from typing import cast
-from typing import Optional
+from typing import Optional, cast
 
-import django
-from django.http import HttpRequest
-from django.http import HttpResponse
-from django.http import JsonResponse
-from strawberry.django.views import BaseView
-from strawberry.django.views import GraphQLView
-from strawberry.http import GraphQLHTTPResponse
-from strawberry.http import process_result
+from django.http import HttpRequest, HttpResponse, JsonResponse
+from strawberry.django.views import AsyncGraphQLView, BaseView, GraphQLView
+from strawberry.http import GraphQLHTTPResponse, process_result
 from strawberry.types import ExecutionResult
+
 from strawberry_django_jwt.exceptions import JSONWebTokenError
 
 
@@ -50,20 +45,15 @@ class StatusHandlingGraphQLView(BaseStatusHandlingGraphQLView, GraphQLView):
         return res
 
 
-if django.VERSION[:2] >= (3, 1):
-    from strawberry.django.views import AsyncGraphQLView
-
-    class AsyncStatusHandlingGraphQLView(
-        BaseStatusHandlingGraphQLView, AsyncGraphQLView
-    ):
-        async def process_result(
-            self, request: HttpRequest, result: ExecutionResult
-        ) -> StatusGraphQLHTTPResponse:
-            res = make_status_response(process_result(result))
-            if result.errors:
-                if any(
-                    isinstance(err, JSONWebTokenError)
-                    for err in [e.original_error for e in result.errors]
-                ):
-                    res["status"] = 401
-            return res
+class AsyncStatusHandlingGraphQLView(BaseStatusHandlingGraphQLView, AsyncGraphQLView):
+    async def process_result(
+        self, request: HttpRequest, result: ExecutionResult
+    ) -> StatusGraphQLHTTPResponse:
+        res = make_status_response(process_result(result))
+        if result.errors:
+            if any(
+                isinstance(err, JSONWebTokenError)
+                for err in [e.original_error for e in result.errors]
+            ):
+                res["status"] = 401
+        return res

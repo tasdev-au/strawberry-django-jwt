@@ -1,27 +1,27 @@
 import json
 from importlib import reload
 
-import django
 import mock
 import strawberry.django
 from django.contrib.auth import get_user_model
-from django_mock_queries.query import MockModel  # type: ignore
-from django_mock_queries.query import MockSet  # type: ignore
-from strawberry.django import auto
-from strawberry.django import mutations
+from django_mock_queries.query import MockModel, MockSet  # type: ignore
+from strawberry.django import auto, mutations
 from strawberry.types import Info
 
 import strawberry_django_jwt.mutations
-from strawberry_django_jwt.decorators import login_field, dispose_extra_kwargs
-from strawberry_django_jwt.decorators import login_required
+from strawberry_django_jwt.decorators import (
+    dispose_extra_kwargs,
+    login_field,
+    login_required,
+)
 from strawberry_django_jwt.mixins import JSONWebTokenMixin
 from strawberry_django_jwt.settings import jwt_settings
 from strawberry_django_jwt.shortcuts import get_token
+from tests.testcases import AsyncSchemaTestCase
 from . import mixins
 from .decorators import OverrideJwtSettings
 from .models import MyTestModel
-from .testcases import CookieTestCase
-from .testcases import SchemaTestCase
+from .testcases import CookieTestCase, SchemaTestCase
 
 
 class TokenAuthTests(mixins.TokenAuthMixin, SchemaTestCase):
@@ -341,97 +341,94 @@ class MutationFieldTests(SchemaTestCase):
         self.assertEqual(data["test"], "test")
 
 
-if django.VERSION[:2] >= (3, 1):
-    from .testcases import AsyncSchemaTestCase
+class AsyncLoginLogoutTest(AsyncSchemaTestCase):
+    login_query = """
+    mutation TokenAuth($username: String!, $password: String!) {
+      tokenAuth(username: $username, password: $password) {
+        token
+        payload {
+            username
+        }
+      }
+    }"""
+    verify_query = """
+    mutation VerifyToken($token: String!) {
+      verifyToken(token: $token) {
+        payload {
+            username
+        }
+      }
+    }"""
+    mutate_query = """
+    mutation Mutate {
+      mutate
+    }"""
 
-    class AsyncLoginLogoutTest(AsyncSchemaTestCase):
-        login_query = """
-        mutation TokenAuth($username: String!, $password: String!) {
-          tokenAuth(username: $username, password: $password) {
-            token
-            payload {
-                username
+    @strawberry.type
+    class Mutation:
+        token_auth = strawberry_django_jwt.mutations.ObtainJSONWebToken.obtain
+        verify_token = strawberry_django_jwt.mutations.Verify.verify
+
+        @login_field
+        def mutate(self, info: Info) -> str:
+            return "OK"
+
+    async def test_invalid_credentials_async(self):
+        # Login
+        self.query = self.login_query
+        response = await self.execute(
+            {
+                self.user.USERNAME_FIELD: self.user.get_username(),
+                "password": "wrongpassword",
             }
-          }
-        }"""
-        verify_query = """
-        mutation VerifyToken($token: String!) {
-          verifyToken(token: $token) {
-            payload {
-                username
+        )
+        self.assertIsNone(response.data)
+        self.assertEqual(len(response.errors), 1)
+
+    async def test_login_logout_async(self):
+        self.client.schema(query=self.Query, mutation=self.Mutation)
+        # Login
+        self.query = self.login_query
+        response = await self.execute(
+            {
+                self.user.USERNAME_FIELD: self.user.get_username(),
+                "password": "dolphins",
             }
-          }
-        }"""
-        mutate_query = """
-        mutation Mutate {
-          mutate
-        }"""
+        )
 
-        @strawberry.type
-        class Mutation:
-            token_auth = strawberry_django_jwt.mutations.ObtainJSONWebToken.obtain
-            verify_token = strawberry_django_jwt.mutations.Verify.verify
+        self.assertIsNone(response.errors)
+        self.assertEqual(
+            response.data["tokenAuth"]["payload"]["username"],
+            self.user.get_username(),
+        )
+        token = response.data["tokenAuth"]["token"]
 
-            @login_field
-            def mutate(self, info: Info) -> str:
-                return "OK"
+        # Verify with headers
 
-        async def test_invalid_credentials_async(self):
-            # Login
-            self.query = self.login_query
-            response = await self.execute(
-                {
-                    self.user.USERNAME_FIELD: self.user.get_username(),
-                    "password": "wrongpassword",
-                }
-            )
-            self.assertIsNone(response.data)
-            self.assertEqual(len(response.errors), 1)
+        self.query = self.verify_query
+        self.client.authenticate(token)
+        response = await self.execute({"token": token})
 
-        async def test_login_logout_async(self):
-            self.client.schema(query=self.Query, mutation=self.Mutation)
-            # Login
-            self.query = self.login_query
-            response = await self.execute(
-                {
-                    self.user.USERNAME_FIELD: self.user.get_username(),
-                    "password": "dolphins",
-                }
-            )
+        self.assertIsNone(response.errors)
+        self.assertEqual(
+            response.data["verifyToken"]["payload"]["username"],
+            self.user.get_username(),
+        )
 
-            self.assertIsNone(response.errors)
-            self.assertEqual(
-                response.data["tokenAuth"]["payload"]["username"],
-                self.user.get_username(),
-            )
-            token = response.data["tokenAuth"]["token"]
+        # Check login
 
-            # Verify with headers
+        self.query = self.mutate_query
+        self.client.authenticate(token)
+        response = await self.execute()
 
-            self.query = self.verify_query
-            self.client.authenticate(token)
-            response = await self.execute({"token": token})
+        self.assertIsNone(response.errors)
+        self.assertEqual(response.data["mutate"], "OK")
 
-            self.assertIsNone(response.errors)
-            self.assertEqual(
-                response.data["verifyToken"]["payload"]["username"],
-                self.user.get_username(),
-            )
+        # Logout
 
-            # Check login
+        self.query = self.mutate_query
+        self.client.logout()
+        response = await self.execute()
 
-            self.query = self.mutate_query
-            self.client.authenticate(token)
-            response = await self.execute()
-
-            self.assertIsNone(response.errors)
-            self.assertEqual(response.data["mutate"], "OK")
-
-            # Logout
-
-            self.query = self.mutate_query
-            self.client.logout()
-            response = await self.execute()
-
-            self.assertIsNone(response.data)
-            self.assertEqual(len(response.errors), 1)
+        self.assertIsNone(response.data)
+        self.assertEqual(len(response.errors), 1)

@@ -4,17 +4,15 @@ from functools import wraps
 from types import ModuleType
 from unittest import mock
 
-import django
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import rsa
 
 import strawberry_django_jwt.object_types
-from strawberry_django_jwt import exceptions
-from strawberry_django_jwt import utils
+from strawberry_django_jwt import exceptions, utils
 from strawberry_django_jwt.object_types import TokenPayloadType
 from strawberry_django_jwt.settings import jwt_settings
-from .decorators import OverrideJwtSettings
-from .testcases import TestCase
+from tests.decorators import OverrideJwtSettings
+from tests.testcases import AsyncTestCase, TestCase
 
 
 def reload_import(imp: ModuleType):
@@ -187,26 +185,24 @@ class GetUserByPayloadTests(TestCase):
             utils.get_user_by_payload(payload)
 
 
-if django.VERSION[:2] >= (3, 1):
-    from .testcases import AsyncTestCase
+class GetUserByNaturalKeyTestsAsync(AsyncTestCase):
+    async def test_user_does_not_exists_async(self):
+        user = await utils.get_user_by_natural_key_async(0)
+        self.assertIsNone(user)
 
-    class GetUserByNaturalKeyTestsAsync(AsyncTestCase):
-        async def test_user_does_not_exists_async(self):
-            user = await utils.get_user_by_natural_key_async(0)
-            self.assertIsNone(user)
 
-    class GetUserByPayloadTestsAsync(AsyncTestCase):
-        async def test_user_by_invalid_payload_async(self):
+class GetUserByPayloadTestsAsync(AsyncTestCase):
+    async def test_user_by_invalid_payload_async(self):
+        with self.assertRaises(exceptions.JSONWebTokenError):
+            await utils.get_user_by_payload_async(TokenPayloadType())
+
+    async def test_user_disabled_by_payload_async(self):
+        payload = utils.jwt_payload(self.user)
+
+        with mock.patch(
+            "django.contrib.auth.models.User.is_active",
+            new_callable=mock.PropertyMock,
+            return_value=False,
+        ):
             with self.assertRaises(exceptions.JSONWebTokenError):
-                await utils.get_user_by_payload_async(TokenPayloadType())
-
-        async def test_user_disabled_by_payload_async(self):
-            payload = utils.jwt_payload(self.user)
-
-            with mock.patch(
-                "django.contrib.auth.models.User.is_active",
-                new_callable=mock.PropertyMock,
-                return_value=False,
-            ):
-                with self.assertRaises(exceptions.JSONWebTokenError):
-                    await utils.get_user_by_payload_async(payload)
+                await utils.get_user_by_payload_async(payload)

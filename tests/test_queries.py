@@ -1,6 +1,5 @@
 from typing import List
 
-import django
 import pytest
 import strawberry
 import strawberry_django
@@ -9,15 +8,18 @@ from django.contrib.auth.models import AnonymousUser
 from graphql import get_introspection_query
 from strawberry.types import Info
 
-from strawberry_django_jwt.decorators import dispose_extra_kwargs, permission_required
-from strawberry_django_jwt.decorators import login_required
+from strawberry_django_jwt.decorators import (
+    dispose_extra_kwargs,
+    login_required,
+    permission_required,
+)
 from strawberry_django_jwt.mixins import JSONWebTokenMixin
 from strawberry_django_jwt.model_object_types import UserType
 from strawberry_django_jwt.settings import jwt_settings
 from strawberry_django_jwt.shortcuts import get_token
-from .decorators import OverrideJwtSettings
-from .testcases import SchemaTestCase
 from tests.strawberry_types import MyTestModel
+from tests.decorators import OverrideJwtSettings
+from tests.testcases import AsyncSchemaTestCase, SchemaTestCase
 
 
 class QueriesTests(SchemaTestCase):
@@ -282,138 +284,133 @@ class QueriesTests(SchemaTestCase):
         self.assertIsNone(response.errors)
 
 
-if django.VERSION[:2] >= (3, 1):
-    from .testcases import AsyncSchemaTestCase
+class AsyncQueriesTests(AsyncSchemaTestCase):
+    @strawberry.type
+    class Query(JSONWebTokenMixin):
+        @strawberry.field
+        @dispose_extra_kwargs
+        async def test(self, info) -> UserType:
+            ret = UserType(**info.context.user.__dict__)
+            return ret
 
-    class AsyncQueriesTests(AsyncSchemaTestCase):
+    def setUp(self):
+        super().setUp()
+
+        self.other_user = get_user_model().objects.create_user("other")
+        self.other_token = get_token(self.other_user)
+
+    async def test_login_required(self):
         @strawberry.type
         class Query(JSONWebTokenMixin):
             @strawberry.field
-            @dispose_extra_kwargs
-            async def test(self, info) -> UserType:
-                ret = UserType(**info.context.user.__dict__)
-                return ret
+            @login_required
+            async def test(self) -> str:
+                return "TEST"
 
-        def setUp(self):
-            super().setUp()
+            @strawberry.field
+            @login_required
+            async def test_info(self, info: Info) -> str:
+                return "TEST-INFO"
 
-            self.other_user = get_user_model().objects.create_user("other")
-            self.other_token = get_token(self.other_user)
+        self.client.schema(query=Query, mutation=self.Mutation)
 
-        async def test_login_required(self):
-            @strawberry.type
-            class Query(JSONWebTokenMixin):
-                @strawberry.field
-                @login_required
-                async def test(self) -> str:
-                    return "TEST"
+        query = """
+        query Test {
+            test
+            testInfo
+        }
+        """
 
-                @strawberry.field
-                @login_required
-                async def test_info(self, info: Info) -> str:
-                    return "TEST-INFO"
+        self.client.authenticate(self.token)
 
-            self.client.schema(query=Query, mutation=self.Mutation)
+        response = await self.client.execute(query)
+        data = response.data
 
-            query = """
-            query Test {
-                test
-                testInfo
-            }
-            """
+        self.assertEqual(data["test"], "TEST")
+        self.assertIsNone(response.errors)
 
-            self.client.authenticate(self.token)
-
-            response = await self.client.execute(query)
-            data = response.data
-
-            self.assertEqual(data["test"], "TEST")
-            self.assertIsNone(response.errors)
-
-        @OverrideJwtSettings(JWT_ALLOW_ARGUMENT=True)
-        async def test_multiple_credentials(self):
-            query = """
-            query Tests($token: String!, $otherToken: String!) {{
-              testBegin: test {{
-                username
-              }}
-              testToken: test({0}: $token) {{
-                username
-              }}
-              testOtherToken: test({0}: $otherToken) {{
-                username
-              }}
-              testEnd: test {{
-                username
-              }}
-            }}""".format(
-                jwt_settings.JWT_ARGUMENT_NAME
-            )
-
-            self.client.authenticate(self.token)
-
-            variables = {
-                "token": self.token,
-                "otherToken": self.other_token,
-            }
-
-            response = await self.client.execute(query, variables)
-            data = response.data
-
-            self.assertEqual(data["testBegin"].get("username"), self.user.username)
-            self.assertEqual(data["testEnd"].get("username"), self.user.username)
-            self.assertEqual(data["testToken"].get("username"), self.user.username)
-            self.assertEqual(
-                data["testOtherToken"].get("username"), self.other_user.username
-            )
-
-            self.assertIsNone(response.errors)
-
-        @OverrideJwtSettings(JWT_ALLOW_ARGUMENT=True)
-        async def test_invalid_credentials(self):
-            query = """
-            query Tests {{
-              testInvalidToken: test({0}: "invalid") {{
-                username
-              }}
-            }}""".format(
-                jwt_settings.JWT_ARGUMENT_NAME
-            )
-
-            self.client.authenticate(self.token)
-
-            response = await self.client.execute(query)
-            data = response.data
-
-            self.assertIsNone(data)
-            self.assertEqual(len(response.errors), 1)
-
-        @OverrideJwtSettings(
-            JWT_ALLOW_ARGUMENT=True,
-            JWT_ALLOW_ANY_CLASSES=[
-                "graphql.type.definition.GraphQLType",
-            ],
+    @OverrideJwtSettings(JWT_ALLOW_ARGUMENT=True)
+    async def test_multiple_credentials(self):
+        query = """
+        query Tests($token: String!, $otherToken: String!) {{
+          testBegin: test {{
+            username
+          }}
+          testToken: test({0}: $token) {{
+            username
+          }}
+          testOtherToken: test({0}: $otherToken) {{
+            username
+          }}
+          testEnd: test {{
+            username
+          }}
+        }}""".format(
+            jwt_settings.JWT_ARGUMENT_NAME
         )
-        async def test_allow_any(self):
-            query = f"""
-            {{
-              testAllowAny: test {{
-                username
-                id
-              }}
-              testInvalidToken: test({jwt_settings.JWT_ARGUMENT_NAME}: "invalid") {{
-                username
-                id
-              }}
-            }}"""
 
-            self.client.authenticate("invalid")
+        self.client.authenticate(self.token)
 
-            response = await self.client.execute(query)
+        variables = {
+            "token": self.token,
+            "otherToken": self.other_token,
+        }
 
-            self.assertIsNone(response.data["testAllowAny"].get("id"), AnonymousUser)
-            self.assertEqual(response.data["testAllowAny"].get("username"), "")
-            self.assertIsNone(
-                response.data["testInvalidToken"].get("id"), AnonymousUser
-            )
-            self.assertEqual(response.data["testInvalidToken"].get("username"), "")
+        response = await self.client.execute(query, variables)
+        data = response.data
+
+        self.assertEqual(data["testBegin"].get("username"), self.user.username)
+        self.assertEqual(data["testEnd"].get("username"), self.user.username)
+        self.assertEqual(data["testToken"].get("username"), self.user.username)
+        self.assertEqual(
+            data["testOtherToken"].get("username"), self.other_user.username
+        )
+
+        self.assertIsNone(response.errors)
+
+    @OverrideJwtSettings(JWT_ALLOW_ARGUMENT=True)
+    async def test_invalid_credentials(self):
+        query = """
+        query Tests {{
+          testInvalidToken: test({0}: "invalid") {{
+            username
+          }}
+        }}""".format(
+            jwt_settings.JWT_ARGUMENT_NAME
+        )
+
+        self.client.authenticate(self.token)
+
+        response = await self.client.execute(query)
+        data = response.data
+
+        self.assertIsNone(data)
+        self.assertEqual(len(response.errors), 1)
+
+    @OverrideJwtSettings(
+        JWT_ALLOW_ARGUMENT=True,
+        JWT_ALLOW_ANY_CLASSES=[
+            "graphql.type.definition.GraphQLType",
+        ],
+    )
+    async def test_allow_any(self):
+        query = f"""
+        {{
+          testAllowAny: test {{
+            username
+            id
+          }}
+          testInvalidToken: test({jwt_settings.JWT_ARGUMENT_NAME}: "invalid") {{
+            username
+            id
+          }}
+        }}"""
+
+        self.client.authenticate("invalid")
+
+        response = await self.client.execute(query)
+
+        self.assertIsNone(response.data["testAllowAny"].get("id"), AnonymousUser)
+        self.assertEqual(response.data["testAllowAny"].get("username"), "")
+        self.assertIsNone(response.data["testInvalidToken"].get("id"), AnonymousUser)
+        self.assertEqual(response.data["testInvalidToken"].get("username"), "")

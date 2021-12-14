@@ -6,17 +6,19 @@ import strawberry
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission, User
 from django.contrib.contenttypes.models import ContentType
-from django.test import RequestFactory
-from django.test import testcases
+from django.test import AsyncRequestFactory, RequestFactory, testcases  # type: ignore
 from graphql.execution.execute import GraphQLResolveInfo
-from strawberry.django.views import GraphQLView
+from strawberry.django.views import AsyncGraphQLView, GraphQLView
 
 from strawberry_django_jwt.decorators import jwt_cookie
 from strawberry_django_jwt.settings import jwt_settings
-from strawberry_django_jwt.testcases import JSONWebTokenClient
-from strawberry_django_jwt.testcases import JSONWebTokenTestCase
-from strawberry_django_jwt.utils import jwt_encode
-from strawberry_django_jwt.utils import jwt_payload
+from strawberry_django_jwt.testcases import (
+    AsyncJSONWebTokenClient,
+    AsyncJSONWebTokenTestCase,
+    JSONWebTokenClient,
+    JSONWebTokenTestCase,
+)
+from strawberry_django_jwt.utils import jwt_encode, jwt_payload
 from tests.models import MyTestModel
 
 
@@ -114,84 +116,80 @@ class RelayCookieTestCase(RelaySchemaTestCase, CookieTestCase):
     """RelayCookieTestCase"""
 
 
-if django.VERSION[:2] >= (3, 1):
-    from django.test import AsyncRequestFactory  # type: ignore
-    from strawberry_django_jwt.testcases import (
-        AsyncJSONWebTokenTestCase,
-        AsyncJSONWebTokenClient,
-    )
-    from strawberry.django.views import AsyncGraphQLView
+class AsyncUserTestCase(testcases.TransactionTestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="test",
+            password="dolphins",
+        )
 
-    class AsyncUserTestCase(testcases.TransactionTestCase):
-        def setUp(self):
-            self.user = get_user_model().objects.create_user(
-                username="test",
-                password="dolphins",
-            )
 
-    class AsyncTestCase(AsyncUserTestCase):
-        def setUp(self):
-            super().setUp()
-            self.payload = jwt_payload(self.user)
-            self.token = jwt_encode(self.payload)
-            self.request_factory = AsyncRequestFactory()
+class AsyncTestCase(AsyncUserTestCase):
+    def setUp(self):
+        super().setUp()
+        self.payload = jwt_payload(self.user)
+        self.token = jwt_encode(self.payload)
+        self.request_factory = AsyncRequestFactory()
 
-        def info(self, user=None, **headers):
-            request = self.request_factory.post("/", **headers)
-            if django.VERSION[:2] == (3, 1):
-                request.META.update({f"HTTP_{k}": v for k, v in headers.items()})
+    def info(self, user=None, **headers):
+        request = self.request_factory.post("/", **headers)
+        if django.VERSION[:2] == (3, 1):
+            request.META.update({f"HTTP_{k}": v for k, v in headers.items()})
 
-            if user is not None:
-                request.user = user
+        if user is not None:
+            request.user = user
 
-            return mock.Mock(
-                context=request,
-                path=["test"],
-                spec=GraphQLResolveInfo,
-            )
+        return mock.Mock(
+            context=request,
+            path=["test"],
+            spec=GraphQLResolveInfo,
+        )
 
-    class AsyncSchemaTestCase(AsyncTestCase, AsyncJSONWebTokenTestCase):
-        @strawberry.type
-        class Query:
-            test: str
 
-        Mutation = None
+class AsyncSchemaTestCase(AsyncTestCase, AsyncJSONWebTokenTestCase):
+    @strawberry.type
+    class Query:
+        test: str
 
-        def setUp(self):
-            super().setUp()
-            self.client.schema(query=self.Query, mutation=self.Mutation)
+    Mutation = None
 
-        def execute(self, variables=None):
-            assert self.query, "`query` property not specified"
-            return self.client.execute(self.query, variables)
+    def setUp(self):
+        super().setUp()
+        self.client.schema(query=self.Query, mutation=self.Mutation)
 
-        def assertUsernameIn(self, payload):
-            username = payload[self.user.USERNAME_FIELD]
-            self.assertEqual(self.user.get_username(), username)
+    def execute(self, variables=None):
+        assert self.query, "`query` property not specified"
+        return self.client.execute(self.query, variables)
 
-    class AsyncCookieClient(AsyncJSONWebTokenClient):
-        def post(self, path, data, **kwargs):
-            kwargs.setdefault("content_type", "application/json")
-            return self.generic("POST", path, json.dumps(data), **kwargs)
+    def assertUsernameIn(self, payload):
+        username = payload[self.user.USERNAME_FIELD]
+        self.assertEqual(self.user.get_username(), username)
 
-        def set_cookie(self, token):
-            self.cookies[jwt_settings.JWT_COOKIE_NAME] = token
 
-        async def execute(self, query, variables=None, **extra):
-            data = {
-                "query": query,
-                "variables": variables,
-            }
-            view = AsyncGraphQLView(schema=self._schema)
-            request = self.post("/", data=data, **extra)
-            response = await jwt_cookie(view.dispatch)(request)
-            content = self._parse_json(response)
-            response.data = content.get("data")
-            response.errors = content.get("errors")
-            return response
+class AsyncCookieClient(AsyncJSONWebTokenClient):
+    def post(self, path, data, **kwargs):
+        kwargs.setdefault("content_type", "application/json")
+        return self.generic("POST", path, json.dumps(data), **kwargs)
 
-    class AsyncCookieTestCase(AsyncSchemaTestCase):
-        client_class = AsyncCookieClient
+    def set_cookie(self, token):
+        self.cookies[jwt_settings.JWT_COOKIE_NAME] = token
 
-        def set_cookie(self):
-            self.client.set_cookie(self.token)
+    async def execute(self, query, variables=None, **extra):
+        data = {
+            "query": query,
+            "variables": variables,
+        }
+        view = AsyncGraphQLView(schema=self._schema)
+        request = self.post("/", data=data, **extra)
+        response = await jwt_cookie(view.dispatch)(request)
+        content = self._parse_json(response)
+        response.data = content.get("data")
+        response.errors = content.get("errors")
+        return response
+
+
+class AsyncCookieTestCase(AsyncSchemaTestCase):
+    client_class = AsyncCookieClient
+
+    def set_cookie(self):
+        self.client.set_cookie(self.token)
