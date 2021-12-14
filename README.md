@@ -143,6 +143,10 @@ substitutes [Graphene](https://graphene-python.org/) GraphQL backend for [Strawb
   - It might be possible to create a workaround by using either a class decorator or by creating a custom graphql
     scheme that somehow preserves class hierarchy of types
 
+## Example Application
+
+To start the example application, install poetry dev dependencies (`poetry install` will suffice) and run `poetry run uvicorn tests.example_app.asgi:application`
+
 ## Quickstart Documentation
 
 ===============_Work in Progress_===============
