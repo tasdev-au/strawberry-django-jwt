@@ -61,3 +61,5 @@ REST_FRAMEWORK = {
 }
 
 ROOT_URLCONF = "tests.example_app.urls"
+
+GRAPHQL_JWT = {"JWT_AUTHENTICATE_INTROSPECTION": True}

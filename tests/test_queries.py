@@ -17,7 +17,7 @@ from strawberry_django_jwt.settings import jwt_settings
 from strawberry_django_jwt.shortcuts import get_token
 from .decorators import OverrideJwtSettings
 from .testcases import SchemaTestCase
-from .types import MyTestModel
+from tests.strawberry_types import MyTestModel
 
 
 class QueriesTests(SchemaTestCase):
