@@ -787,7 +787,7 @@ fastapi = ["fastapi (>=0.65.2)"]
 
 [[package]]
 name = "strawberry-graphql-django"
-version = "0.3.1"
+version = "0.4.0"
 description = "Strawberry GraphQL Django extension"
 category = "main"
 optional = false
@@ -1028,7 +1028,7 @@ dev = ["uvicorn"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "0ef9884d968f19978f3cdc175de4a64588571b670b0193d4c38995e22eaf2d23"
+content-hash = "c01ab30592d0c7d318bc966675e7a3f2156e664046555b17d5e02c3eaac80b5a"
 
 [metadata.files]
 anyio = [
