@@ -86,6 +86,7 @@ class RefreshTokenMixin:
 
 
 class RefreshMixin(RefreshTokenMutationMixin, RefreshTokenMixin):
+    @OverrideJwtSettings(JWT_LONG_RUNNING_REFRESH_TOKEN=True)
     def test_refresh_token(self):
         with catch_signal(refresh_token_rotated) as refresh_token_rotated_handler, back_to_the_future(seconds=1):
             response = self.execute(
@@ -110,7 +111,7 @@ class RefreshMixin(RefreshTokenMutationMixin, RefreshTokenMixin):
         self.assertEqual(refresh_token.user, self.user)
         self.assertGreater(refresh_token.created, self.refresh_token.created)
 
-    @OverrideJwtSettings(JWT_REUSE_REFRESH_TOKENS=True)
+    @OverrideJwtSettings(JWT_LONG_RUNNING_REFRESH_TOKEN=True, JWT_REUSE_REFRESH_TOKENS=True)
     def test_reuse_refresh_token(self):
         with catch_signal(refresh_token_rotated) as refresh_token_rotated_handler, back_to_the_future(seconds=1):
             response = self.execute(
@@ -131,10 +132,12 @@ class RefreshMixin(RefreshTokenMutationMixin, RefreshTokenMixin):
         self.assertNotEqual(token, self.token)
         self.assertNotEqual(refresh_token.token, self.refresh_token.token)
 
+    @OverrideJwtSettings(JWT_LONG_RUNNING_REFRESH_TOKEN=True)
     def test_missing_refresh_token(self):
         response = self.execute({})
         self.assertIsNotNone(response.errors)
 
+    @OverrideJwtSettings(JWT_LONG_RUNNING_REFRESH_TOKEN=True)
     def test_refresh_token_expired(self):
         with refresh_expired():
             response = self.execute(

@@ -1,4 +1,4 @@
-from typing import Any, Dict, Tuple, Type, TypeVar
+from typing import Any, Dict, Optional, Tuple, Type, TypeVar
 
 from django.contrib.auth import get_user_model
 import strawberry.django
@@ -51,4 +51,4 @@ class PayloadType:
 class TokenDataType:
     payload: TokenPayloadType
     token: str = ""
-    refresh_expires_in: int = 0
+    refresh_expires_in: Optional[int] = 0
