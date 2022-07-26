@@ -1,6 +1,7 @@
 import inspect
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Type, Union
 
+from asgiref.sync import sync_to_async
 from django.utils.translation import gettext as _
 import strawberry
 from strawberry.field import StrawberryField
@@ -26,6 +27,7 @@ from strawberry_django_jwt.refresh_token.shortcuts import (
     create_refresh_token,
     get_refresh_token,
     refresh_token_lazy,
+    refresh_token_lazy_async,
 )
 from strawberry_django_jwt.signals import token_refreshed
 from strawberry_django_jwt.utils import (
@@ -62,7 +64,7 @@ class BaseJSONWebTokenMixin:
                     continue
                 field.arguments.append(create_strawberry_argument("token", "token", str, **field_options.get("token", {})))
                 if settings.jwt_settings.JWT_LONG_RUNNING_REFRESH_TOKEN:
-                    field.arguments.append(create_strawberry_argument("refresh_token", "refresh_token", str, **field_options.get("refresh_token", {})))
+                    field.arguments.append(create_strawberry_argument("refresh_token", "refreshToken", str, **field_options.get("refresh_token", {})))
 
 
 class JSONWebTokenMixin(BaseJSONWebTokenMixin):
@@ -74,11 +76,11 @@ class JSONWebTokenMixin(BaseJSONWebTokenMixin):
 
 
 class KeepAliveRefreshMixin(JSONWebTokenMixin):
-    @strawberry.mutation
+    @staticmethod
     @setup_jwt_cookie
     @csrf_rotation
     @ensure_token
-    def refresh(self, info: Info, token: Optional[str]) -> TokenDataType:
+    def _refresh(self, info: Info, token: Optional[str]) -> TokenDataType:
         def on_resolve(values):
             payload, token = values
             payload.token = token
@@ -105,14 +107,20 @@ class KeepAliveRefreshMixin(JSONWebTokenMixin):
         result = TokenDataType(payload, token, refresh_expires_in)
         return maybe_thenable((result, token), on_resolve)
 
+    def refresh(self, info: Info, token: Optional[str] = None) -> TokenDataType:
+        return KeepAliveRefreshMixin._refresh(self, info=info, token=token)
+
+    async def refresh_async(self, info: Info, token: Optional[str] = None) -> TokenDataType:
+        return await sync_to_async(KeepAliveRefreshMixin._refresh)(self, info=info, token=token)
+
 
 class RefreshTokenMixin(JSONWebTokenMixin):
-    @strawberry.mutation
+    @staticmethod
     @setup_jwt_cookie
     @csrf_rotation
     @refresh_expiration
     @ensure_refresh_token
-    def refresh(self, info: Info, refresh_token: Optional[str]) -> RefreshedTokenType:
+    def _refresh(self, info: Info, refresh_token: Optional[str], _is_async: Optional[bool] = False) -> RefreshedTokenType:
         context = get_context(info)
         old_refresh_token = get_refresh_token(refresh_token, context)
 
@@ -132,7 +140,7 @@ class RefreshTokenMixin(JSONWebTokenMixin):
             )
             new_refresh_token = context.jwt_refresh_token.get_token()
         else:
-            new_refresh_token = refresh_token_lazy(
+            new_refresh_token = (refresh_token_lazy_async if _is_async else refresh_token_lazy)(
                 old_refresh_token.user,
                 old_refresh_token,
             )
@@ -145,9 +153,25 @@ class RefreshTokenMixin(JSONWebTokenMixin):
         )
         return RefreshedTokenType(payload, token, new_refresh_token, refresh_expires_in=0)
 
+    def refresh(self, info: Info, refresh_token: Optional[str] = None) -> RefreshedTokenType:
+        return RefreshTokenMixin._refresh(self, info=info, refresh_token=refresh_token)
 
-base_class = RefreshTokenMixin if settings.jwt_settings.JWT_LONG_RUNNING_REFRESH_TOKEN else KeepAliveRefreshMixin
+    async def refresh_async(self, info: Info, refresh_token: Optional[str] = None) -> RefreshedTokenType:
+        return await sync_to_async(RefreshTokenMixin._refresh)(self, info=info, refresh_token=refresh_token, _is_async=True)
+
+
+base_class: Type[Union[RefreshTokenMixin, KeepAliveRefreshMixin]] = (
+    RefreshTokenMixin if settings.jwt_settings.JWT_LONG_RUNNING_REFRESH_TOKEN else KeepAliveRefreshMixin
+)
 
 
 class RefreshMixin(base_class, JSONWebTokenMixin):  # type: ignore
     """RefreshMixin"""
+
+    refresh = strawberry.mutation(base_class.refresh)
+
+
+class AsyncRefreshMixin(base_class, JSONWebTokenMixin):  # type: ignore
+    """Async version of RefreshMixin"""
+
+    refresh = strawberry.mutation(base_class.refresh_async)

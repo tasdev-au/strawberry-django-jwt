@@ -2,7 +2,6 @@ import strawberry
 
 import strawberry_django_jwt.mutations
 from tests.refresh_token import mixins
-from tests.refresh_token.mutations import Refresh
 from tests.refresh_token.testcases import AsyncCookieTestCase, CookieTestCase
 from tests.testcases import AsyncSchemaTestCase, SchemaTestCase
 
@@ -41,7 +40,27 @@ class RefreshTests(mixins.RefreshMixin, SchemaTestCase):
     }"""
 
     refresh_token_mutations = {
-        "refresh_token": Refresh.refresh,
+        "refresh_token": strawberry_django_jwt.mutations.Refresh.refresh,
+    }
+
+
+class AsyncRefreshTests(mixins.AsyncRefreshMixin, AsyncSchemaTestCase):
+    query = """
+    mutation RefreshToken($refreshToken: String) {
+      refreshToken(refreshToken: $refreshToken) {
+        token
+        payload {
+            username
+            origIat
+            exp
+        }
+        refreshToken
+        refreshExpiresIn
+      }
+    }"""
+
+    refresh_token_mutations = {
+        "refresh_token": strawberry_django_jwt.mutations.RefreshAsync.refresh,
     }
 
 
@@ -91,7 +110,7 @@ class CookieRefreshTests(mixins.CookieRefreshMixin, CookieTestCase):
     }"""
 
     refresh_token_mutations = {
-        "refresh_token": Refresh.refresh,
+        "refresh_token": strawberry_django_jwt.mutations.Refresh.refresh,
     }
 
 
