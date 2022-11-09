@@ -97,7 +97,8 @@ class BaseJSONWebTokenMiddleware(Extension):
 def channels_compat(context: StrawberryChannelsContext) -> None:
     request = context.request
     request.META = request.headers
-    context.request.user = AnonymousUser()
+    if not hasattr(context.request, "user"):
+        context.request.user = AnonymousUser()
     if auth_header := request.headers.get("authorization"):
         request.META["HTTP_AUTHORIZATION"] = auth_header
     request.COOKIES = request.scope["session"]
@@ -105,9 +106,6 @@ def channels_compat(context: StrawberryChannelsContext) -> None:
 
 class JSONWebTokenMiddleware(BaseJSONWebTokenMiddleware):
     def resolve(self, _next, root, info: GraphQLResolveInfo, *args, **kwargs):
-        if isinstance(info.context, StrawberryChannelsContext):
-            channels_compat(info.context)
-
         context, token_argument = self.resolve_base(info, **kwargs)
 
         if (_authenticate(context) or token_argument is not None) and self.authenticate_context(info, **kwargs):
@@ -125,6 +123,9 @@ class JSONWebTokenMiddleware(BaseJSONWebTokenMiddleware):
 
 class AsyncJSONWebTokenMiddleware(BaseJSONWebTokenMiddleware):
     async def resolve(self, _next, root, info: GraphQLResolveInfo, *args, **kwargs):
+        if isinstance(info.context, StrawberryChannelsContext):
+            channels_compat(info.context)
+
         context, token_argument = self.resolve_base(info, **kwargs)
 
         if (_authenticate(context) or token_argument is not None) and self.authenticate_context(info, **kwargs):
