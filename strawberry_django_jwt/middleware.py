@@ -8,6 +8,7 @@ from django.utils.translation import gettext as _
 from graphql import GraphQLResolveInfo, GraphQLType
 from strawberry.extensions import Extension
 from strawberry.types import ExecutionContext
+from strawberry.channels.context import StrawberryChannelsContext
 
 from strawberry_django_jwt import exceptions
 from strawberry_django_jwt.auth import authenticate as authenticate_async
@@ -93,8 +94,20 @@ class BaseJSONWebTokenMiddleware(Extension):
         return context, token_argument
 
 
+def channels_compat(context: StrawberryChannelsContext) -> None:
+    request = context.request
+    request.META = request.headers
+    context.request.user = AnonymousUser()
+    if auth_header := request.headers.get("authorization"):
+        request.META["HTTP_AUTHORIZATION"] = auth_header
+    request.COOKIES = request.scope["session"]
+
+
 class JSONWebTokenMiddleware(BaseJSONWebTokenMiddleware):
     def resolve(self, _next, root, info: GraphQLResolveInfo, *args, **kwargs):
+        if isinstance(info.context, StrawberryChannelsContext):
+            channels_compat(info.context)
+
         context, token_argument = self.resolve_base(info, **kwargs)
 
         if (_authenticate(context) or token_argument is not None) and self.authenticate_context(info, **kwargs):
