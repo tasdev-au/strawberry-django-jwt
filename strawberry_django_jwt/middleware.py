@@ -22,6 +22,7 @@ from strawberry_django_jwt.utils import (
 
 __all__ = [
     "allow_any",
+    "channels_compat",
     "JSONWebTokenMiddleware",
     "AsyncJSONWebTokenMiddleware",
 ]

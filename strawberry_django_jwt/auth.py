@@ -3,6 +3,7 @@ import inspect
 import re
 
 from asgiref.sync import sync_to_async
+from strawberry.channels.handlers.base import ChannelsConsumer
 from django.contrib.auth import get_backends, user_login_failed
 from django.core.exceptions import PermissionDenied
 from django.core.handlers.asgi import ASGIRequest
@@ -44,7 +45,7 @@ async def authenticate(request=None, **credentials):
             elif asyncio.iscoroutinefunction(backend.authenticate):
                 user = await backend.authenticate(request, **credentials)
             else:
-                if isinstance(request, ASGIRequest):
+                if isinstance(request, (ASGIRequest, ChannelsConsumer)):
                     user = await sync_to_async(backend.authenticate)(request, **credentials)
                 else:
                     user = backend.authenticate(request, **credentials)
