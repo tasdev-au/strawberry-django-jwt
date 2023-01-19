@@ -254,7 +254,7 @@ async def create_user_token(user: User) -> object_types.TokenDataType:
             (await sync_to_async(create_refresh_token)(user)) if asyncio.get_event_loop().is_running() else create_refresh_token(user)
         )
         token_object.refresh_expires_in = (
-            refresh_token.created.timestamp() + jwt_settings.JWT_REFRESH_EXPIRATION_DELTA.total_seconds() - int(datetime.now().timestamp())
+            int(refresh_token.created.timestamp()) + jwt_settings.JWT_REFRESH_EXPIRATION_DELTA.total_seconds() - int(datetime.now().timestamp())
         )
         token_object.refresh_token = refresh_token.get_token()
 
