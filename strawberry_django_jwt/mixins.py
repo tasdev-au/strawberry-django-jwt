@@ -104,7 +104,7 @@ class KeepAliveRefreshMixin(JSONWebTokenMixin):
         token = settings.jwt_settings.JWT_ENCODE_HANDLER(payload, context) or ""
         token_refreshed.send(sender=RefreshMixin, request=context, user=user)
 
-        result = TokenDataType(payload, token, refresh_expires_in)
+        result = TokenDataType(payload=payload, token=token, refresh_expires_in=refresh_expires_in)
         return maybe_thenable((result, token), on_resolve)
 
     def refresh(self, info: Info, token: Optional[str] = None) -> TokenDataType:
@@ -151,12 +151,8 @@ class RefreshTokenMixin(JSONWebTokenMixin):
             refresh_token=old_refresh_token,
             refresh_token_issued=new_refresh_token,
         )
-        return RefreshedTokenType(
-            payload=payload,
-            token=token,
-            refresh_token=new_refresh_token,
-            refresh_expires_in=0
-        )
+
+        return RefreshedTokenType(payload=payload, token=token, refresh_token=new_refresh_token, refresh_expires_in=0)
 
     def refresh(self, info: Info, refresh_token: Optional[str] = None) -> RefreshedTokenType:
         return RefreshTokenMixin._refresh(self, info=info, refresh_token=refresh_token)
