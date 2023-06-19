@@ -8,6 +8,7 @@ from django.contrib.auth import get_backends, user_login_failed
 from django.core.exceptions import PermissionDenied
 from django.core.handlers.asgi import ASGIRequest
 from django.views.decorators.debug import sensitive_variables
+from strawberry.channels.handlers.http_handler import ChannelsRequest
 
 SENSITIVE_CREDENTIALS = re.compile("api|token|key|secret|password|signature", re.I)
 CLEANSED_SUBSTITUTE = "********************"
@@ -45,7 +46,7 @@ async def authenticate(request=None, **credentials):
             elif asyncio.iscoroutinefunction(backend.authenticate):
                 user = await backend.authenticate(request, **credentials)
             else:
-                if isinstance(request, (ASGIRequest, ChannelsConsumer)):
+                if isinstance(request, (ChannelsRequest, ChannelsConsumer)):
                     user = await sync_to_async(backend.authenticate)(request, **credentials)
                 else:
                     user = backend.authenticate(request, **credentials)

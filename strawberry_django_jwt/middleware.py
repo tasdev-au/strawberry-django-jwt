@@ -1,14 +1,15 @@
 from inspect import isawaitable
-from typing import Any, Set, cast
+from typing import Any, Set, cast, Callable
 
 from django.contrib.auth import authenticate
 from django.contrib.auth.middleware import get_user
 from django.contrib.auth.models import AnonymousUser
 from django.utils.translation import gettext as _
 from graphql import GraphQLResolveInfo, GraphQLType
-from strawberry.extensions import Extension
+from strawberry.channels.handlers.http_handler import ChannelsRequest
+from strawberry.extensions import SchemaExtension
 from strawberry.types import ExecutionContext
-from strawberry.channels.context import StrawberryChannelsContext
+from strawberry.utils.await_maybe import AwaitableOrValue
 
 from strawberry_django_jwt import exceptions
 from strawberry_django_jwt.auth import authenticate as authenticate_async
@@ -22,7 +23,6 @@ from strawberry_django_jwt.utils import (
 
 __all__ = [
     "allow_any",
-    "channels_compat",
     "JSONWebTokenMiddleware",
     "AsyncJSONWebTokenMiddleware",
 ]
@@ -46,7 +46,7 @@ def _authenticate(request):
     return is_anonymous and get_http_authorization(request) is not None
 
 
-class BaseJSONWebTokenMiddleware(Extension):
+class BaseJSONWebTokenMiddleware(SchemaExtension):
     def __init__(self, *, execution_context: ExecutionContext):
         super().__init__(execution_context=execution_context)
         self.cached_allow_any: Set[Any] = set()
@@ -95,18 +95,15 @@ class BaseJSONWebTokenMiddleware(Extension):
         return context, token_argument
 
 
-def channels_compat(context: StrawberryChannelsContext) -> None:
-    request = context.request
-    request.META = request.headers
-    if not hasattr(context.request, "user"):
-        context.request.user = AnonymousUser()
-    if auth_header := request.headers.get("authorization"):
-        request.META["HTTP_AUTHORIZATION"] = auth_header
-    request.COOKIES = request.scope["session"]
-
-
 class JSONWebTokenMiddleware(BaseJSONWebTokenMiddleware):
-    def resolve(self, _next, root, info: GraphQLResolveInfo, *args, **kwargs):
+    def resolve(
+        self,
+        _next: Callable,
+        root: Any,
+        info: GraphQLResolveInfo,
+        *args: str,
+        **kwargs: Any,
+    ) -> AwaitableOrValue[object]:
         context, token_argument = self.resolve_base(info, **kwargs)
 
         if (_authenticate(context) or token_argument is not None) and self.authenticate_context(info, **kwargs):
@@ -123,14 +120,17 @@ class JSONWebTokenMiddleware(BaseJSONWebTokenMiddleware):
 
 
 class AsyncJSONWebTokenMiddleware(BaseJSONWebTokenMiddleware):
-    async def resolve(self, _next, root, info: GraphQLResolveInfo, *args, **kwargs):
-        if isinstance(info.context, StrawberryChannelsContext):
-            channels_compat(info.context)
-
+    async def resolve(
+        self,
+        _next: Callable,
+        root: Any,
+        info: GraphQLResolveInfo,
+        *args: str,
+        **kwargs: Any,
+    ) -> AwaitableOrValue[object]:
         context, token_argument = self.resolve_base(info, **kwargs)
 
         if (_authenticate(context) or token_argument is not None) and self.authenticate_context(info, **kwargs):
-
             user = await authenticate_async(request=context, **kwargs)
 
             if user is not None:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import jwt
 from calendar import timegm
 from contextlib import suppress
 from datetime import datetime
@@ -9,17 +10,13 @@ from typing import TYPE_CHECKING, Any, Optional, cast
 
 from asgiref.sync import sync_to_async
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import User
-from django.http import HttpRequest
+from django.contrib.auth.models import User, AnonymousUser
 from django.utils.translation import gettext as _
-from graphql import GraphQLResolveInfo
-import jwt
 from packaging.version import parse as parse_ver
-from strawberry.channels.context import StrawberryChannelsContext
 from strawberry.annotation import StrawberryAnnotation  # type: ignore
 from strawberry.arguments import StrawberryArgument
-from strawberry.django.context import StrawberryDjangoContext
-from strawberry.types import Info
+from strawberry.channels.handlers.base import ChannelsConsumer
+from strawberry.channels.handlers.http_handler import ChannelsRequest
 
 from strawberry_django_jwt import exceptions, object_types, signals
 from strawberry_django_jwt.refresh_token.shortcuts import create_refresh_token
@@ -235,12 +232,37 @@ def maybe_thenable(obj, on_resolve):
     return on_resolve(obj)
 
 
-def get_context(info: HttpRequest | Request | Info[Any, Any] | GraphQLResolveInfo | StrawberryChannelsContext) -> Any:
+def channels_compat(request: ChannelsRequest | ChannelsConsumer) -> None:
+    if isinstance(request, ChannelsConsumer):
+        request.META = {
+            header_name.decode().lower(): header_value.decode()
+            for header_name, header_value in request.scope['headers']
+        }
+        request.COOKIES = request.scope["session"]
+    else:
+        request.META = request.headers
+        request.COOKIES = request.consumer.scope["session"]
+
+    if not hasattr(request, "user"):
+        request.user = AnonymousUser()
+    if auth_header := request.META.get("authorization"):
+        request.META["HTTP_AUTHORIZATION"] = auth_header
+
+
+
+def get_context(info: Any) -> Any:
     if hasattr(info, "context"):
-        ctx = getattr(info, "context")  # noqa: B009
-        if isinstance(ctx, (StrawberryDjangoContext, StrawberryChannelsContext)):
-            return ctx.request
-        return ctx
+        context = getattr(info, "context")
+        request = context['request']
+
+        if isinstance(request, ChannelsRequest):
+            channels_compat(request)
+
+        return request
+
+    if isinstance(info, ChannelsConsumer):
+        channels_compat(info)
+
     return info
 
 
